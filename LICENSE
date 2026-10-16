@@ -1,0 +1,65 @@
+MIT License
+
+Copyright (c) 2026 小涑 (xiaosu4610)
+
+================================================================================
+关于本项目（About This Project）
+================================================================================
+
+LTZY-API is a fork / derivative work based on One API.
+LTZY-API 是基于 One API 二次开发的衍生作品。
+
+    Upstream project (上游项目): One API
+    Upstream repository (上游仓库): https://github.com/songquanpeng/one-api
+    Upstream copyright (上游版权): Copyright (c) 2023 JustSong
+    Upstream license (上游许可证): MIT License
+
+The full text of the upstream MIT license is preserved in the file
+"LICENSE-OneAPI" in this repository. As required by the MIT License, the
+original copyright notice and permission notice of One API are retained.
+
+上游 MIT 许可证全文保留于本仓库的 "LICENSE-OneAPI" 文件中。依据 MIT 许可证
+的要求，我们保留了 One API 的原始版权声明与许可声明。
+
+================================================================================
+致基于本项目进行二次开发的使用者（To Those Who Fork This Project）
+================================================================================
+
+As a courtesy and in the spirit of open source, we ask that if you fork or
+build upon LTZY-API, you please:
+
+1. Keep the copyright notices of BOTH LTZY-API and One API;
+2. Preserve the attribution and link to One API in your project;
+3. Preserve this file and the "LICENSE-OneAPI" file.
+
+作为开源精神的体现，我们恳请基于 LTZY-API 进行二次开发的用户：
+
+1. 保留 LTZY-API 与 One API 两方的版权声明；
+2. 在你的项目中保留对 One API 的署名与链接；
+3. 保留本文件与 "LICENSE-OneAPI" 文件。
+
+This is a request (not an additional legal restriction beyond the MIT License),
+and it is the same expectation that the upstream project holds for its forks.
+
+这是一项请求（并非超越 MIT 许可证的额外法律限制），也是上游项目对其衍生
+作品所持有的同样期望。
+
+================================================================================
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
