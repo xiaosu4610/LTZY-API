@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkoukk/tiktoken-go"
+	tiktoken_loader "github.com/pkoukk/tiktoken-go-loader"
 
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/image"
@@ -21,6 +22,8 @@ var defaultTokenEncoder *tiktoken.Tiktoken
 
 func InitTokenEncoders() {
 	logger.SysLog("initializing token encoders")
+	// 使用离线内置编码文件，避免联网下载导致启动卡死/失败（LTZY-API 改造）
+	tiktoken.SetBpeLoader(tiktoken_loader.NewOfflineLoader())
 	gpt35TokenEncoder, err := tiktoken.EncodingForModel("gpt-3.5-turbo")
 	if err != nil {
 		logger.FatalLog(fmt.Sprintf("failed to get gpt-3.5-turbo token encoder: %s, "+

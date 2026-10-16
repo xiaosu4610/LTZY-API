@@ -29,7 +29,7 @@ var buildFS embed.FS
 func main() {
 	common.Init()
 	logger.SetupLogger()
-	logger.SysLogf("One API %s started", common.Version)
+	logger.SysLogf("LTZY-API %s started", common.Version)
 
 	if os.Getenv("GIN_MODE") != gin.DebugMode {
 		gin.SetMode(gin.ReleaseMode)

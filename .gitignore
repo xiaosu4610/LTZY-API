@@ -16,5 +16,7 @@ cmd.md
 .env
 /one-api
 /ltzy-api
-temp
+/ltzy-api.exe
+/ltzy-api-*
+/temp
 .DS_Store
