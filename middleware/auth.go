@@ -163,5 +163,8 @@ func shouldCheckModel(c *gin.Context) bool {
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio") {
 		return true
 	}
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/rerank") {
+		return true
+	}
 	return false
 }
