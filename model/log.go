@@ -245,6 +245,105 @@ func GetChannelStatistics(startTimestamp int64, endTimestamp int64) (stats []*Ch
 	return stats, err
 }
 
+// ModelCostStatistic 模型维度的成本统计（LTZY-API 新增）。
+type ModelCostStatistic struct {
+	ModelName        string `json:"model_name" gorm:"column:model_name"`
+	RequestCount     int64  `json:"request_count" gorm:"column:request_count"`
+	Quota            int64  `json:"quota" gorm:"column:quota"`
+	PromptTokens     int64  `json:"prompt_tokens" gorm:"column:prompt_tokens"`
+	CompletionTokens int64  `json:"completion_tokens" gorm:"column:completion_tokens"`
+}
+
+// UserCostStatistic 用户维度的成本统计（LTZY-API 新增）。
+type UserCostStatistic struct {
+	UserId       int    `json:"user_id" gorm:"column:user_id"`
+	Username     string `json:"username" gorm:"column:username"`
+	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
+	Quota        int64  `json:"quota" gorm:"column:quota"`
+}
+
+// DailyCostStatistic 按日维度的成本趋势统计（LTZY-API 新增）。
+type DailyCostStatistic struct {
+	Day          string `json:"day" gorm:"column:day"`
+	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
+	Quota        int64  `json:"quota" gorm:"column:quota"`
+	Tokens       int64  `json:"tokens" gorm:"column:tokens"`
+}
+
+// GetModelCostStatistics 按模型聚合指定时间窗口内的成本，按额度降序取前 limit 条。
+func GetModelCostStatistics(startTimestamp int64, endTimestamp int64, limit int) (stats []*ModelCostStatistic, err error) {
+	ifnull := "ifnull"
+	if common.UsingPostgreSQL {
+		ifnull = "COALESCE"
+	}
+	tx := LOG_DB.Table("logs").
+		Select(fmt.Sprintf("model_name, count(*) as request_count, %s(sum(quota),0) as quota, "+
+			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens", ifnull, ifnull, ifnull)).
+		Where("type = ?", LogTypeConsume)
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	tx = tx.Group("model_name").Order("quota desc")
+	if limit > 0 {
+		tx = tx.Limit(limit)
+	}
+	err = tx.Scan(&stats).Error
+	return stats, err
+}
+
+// GetUserCostStatistics 按用户聚合指定时间窗口内的成本，按额度降序取前 limit 条。
+func GetUserCostStatistics(startTimestamp int64, endTimestamp int64, limit int) (stats []*UserCostStatistic, err error) {
+	ifnull := "ifnull"
+	if common.UsingPostgreSQL {
+		ifnull = "COALESCE"
+	}
+	tx := LOG_DB.Table("logs").
+		Select(fmt.Sprintf("user_id, username, count(*) as request_count, %s(sum(quota),0) as quota", ifnull)).
+		Where("type = ?", LogTypeConsume)
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	tx = tx.Group("user_id, username").Order("quota desc")
+	if limit > 0 {
+		tx = tx.Limit(limit)
+	}
+	err = tx.Scan(&stats).Error
+	return stats, err
+}
+
+// GetDailyCostStatistics 按天聚合指定时间窗口内的成本，用于趋势图。
+func GetDailyCostStatistics(startTimestamp int64, endTimestamp int64) (stats []*DailyCostStatistic, err error) {
+	groupSelect := "DATE_FORMAT(FROM_UNIXTIME(created_at), '%Y-%m-%d')"
+	if common.UsingPostgreSQL {
+		groupSelect = "TO_CHAR(date_trunc('day', to_timestamp(created_at)), 'YYYY-MM-DD')"
+	}
+	if common.UsingSQLite {
+		groupSelect = "strftime('%Y-%m-%d', datetime(created_at, 'unixepoch'))"
+	}
+	ifnull := "ifnull"
+	if common.UsingPostgreSQL {
+		ifnull = "COALESCE"
+	}
+	tx := LOG_DB.Table("logs").
+		Select(fmt.Sprintf("%s as day, count(*) as request_count, %s(sum(quota),0) as quota, "+
+			"%s(sum(prompt_tokens) + sum(completion_tokens),0) as tokens", groupSelect, ifnull, ifnull)).
+		Where("type = ?", LogTypeConsume)
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	err = tx.Group("day").Order("day asc").Scan(&stats).Error
+	return stats, err
+}
+
 type LogStatistic struct {
 	Day              string `gorm:"column:day"`
 	ModelName        string `gorm:"column:model_name"`
