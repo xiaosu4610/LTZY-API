@@ -198,6 +198,20 @@ func GetCostAnalysis(c *gin.Context) {
 		channelStats = channelStats[:top]
 	}
 
+	// 统一返回空数组而非 null，便于前端直接渲染
+	if modelStats == nil {
+		modelStats = []*model.ModelCostStatistic{}
+	}
+	if userStats == nil {
+		userStats = []*model.UserCostStatistic{}
+	}
+	if channelStats == nil {
+		channelStats = []*model.ChannelStatistic{}
+	}
+	if dailyStats == nil {
+		dailyStats = []*model.DailyCostStatistic{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
