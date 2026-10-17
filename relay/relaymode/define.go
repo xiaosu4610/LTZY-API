@@ -15,6 +15,8 @@ const (
 	Rerank
 	// Responses is for OpenAI Responses API (/v1/responses)
 	Responses
+	// Videos is for video generation (/v1/videos)
+	Videos
 	// Proxy is a special relay mode for proxying requests to custom upstream
 	Proxy
 )

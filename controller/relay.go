@@ -40,6 +40,8 @@ func relayHelper(c *gin.Context, relayMode int) *model.ErrorWithStatusCode {
 		err = controller.RelayRerankHelper(c)
 	case relaymode.Responses:
 		err = controller.RelayResponsesHelper(c)
+	case relaymode.Videos:
+		err = controller.RelayVideoHelper(c)
 	default:
 		err = controller.RelayTextHelper(c)
 	}

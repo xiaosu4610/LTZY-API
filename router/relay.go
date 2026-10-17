@@ -46,6 +46,7 @@ func SetRelayRouter(router *gin.Engine) {
 		relayV1Router.POST("/moderations", controller.Relay)
 		relayV1Router.POST("/rerank", controller.Relay)
 		relayV1Router.POST("/responses", controller.Relay)
+		relayV1Router.POST("/videos", controller.Relay)
 		relayV1Router.POST("/assistants", controller.RelayNotImplemented)
 		relayV1Router.GET("/assistants/:id", controller.RelayNotImplemented)
 		relayV1Router.POST("/assistants/:id", controller.RelayNotImplemented)
