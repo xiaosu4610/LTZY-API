@@ -51,6 +51,9 @@ type User struct {
 	Group            string `json:"group" gorm:"type:varchar(32);default:'default'"`
 	AffCode          string `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
 	InviterId        int    `json:"inviter_id" gorm:"type:int;column:inviter_id;index"`
+	// 所属租户（LTZY-API 新增，C5）。0 = 平台用户（不隔离，可跨租户查看）。
+	// 令牌与日志的租户归属由此字段推导，故它们是唯一真相，不需要各自的 tenant_id。
+	TenantId int `json:"tenant_id" gorm:"type:int;default:0;index"`
 }
 
 func GetMaxUserId() int {
@@ -59,11 +62,25 @@ func GetMaxUserId() int {
 	return user.Id
 }
 
-func GetAllUsers(startIdx int, num int, order string) (users []*User, err error) {
+// GetUserTenantId 取用户所属租户（C5）。0 = 平台用户。
+// 鉴权路径每个请求查一次：这是主键点查，代价极小，
+// 换来的是「用户改租户后立即生效」，不必等重新登录或缓存过期。
+func GetUserTenantId(id int) (int, error) {
+	if id == 0 {
+		return 0, errors.New("用户 id 为空")
+	}
+	var tenantId int
+	err := DB.Model(&User{}).Where("id = ?", id).Pluck("tenant_id", &tenantId).Error
+	return tenantId, err
+}
+
+// GetAllUsers 分页查询用户。tenantId > 0 时只返回该租户的用户（C5 隔离）。
+func GetAllUsers(startIdx int, num int, order string, tenantId int) (users []*User, err error) {
 	// access_token 是「系统管理」凭据，等价于该用户的完整身份（可当会话用），
 	// 用户列表页只需要额度/角色/状态，回显它会让一个普通管理员拿到 root 的令牌
 	// 从而越权；这里与 password 一起排除，个人令牌仍可通过 /api/user/token 自行获取。
 	query := DB.Limit(num).Offset(startIdx).Omit("password", "access_token").Where("status != ?", UserStatusDeleted)
+	query = tenantScope(query, "tenant_id", tenantId)
 
 	switch order {
 	case "quota":
@@ -80,12 +97,15 @@ func GetAllUsers(startIdx int, num int, order string) (users []*User, err error)
 	return users, err
 }
 
-func SearchUsers(keyword string) (users []*User, err error) {
+// SearchUsers 按关键词搜索用户。tenantId > 0 时只在该租户内搜索（C5 隔离）。
+func SearchUsers(keyword string, tenantId int) (users []*User, err error) {
 	// 同 GetAllUsers：搜索结果同样不能带出 access_token
+	query := DB.Omit("password", "access_token")
+	query = tenantScope(query, "tenant_id", tenantId)
 	if !common.UsingPostgreSQL {
-		err = DB.Omit("password", "access_token").Where("id = ? or username LIKE ? or email LIKE ? or display_name LIKE ?", keyword, keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
+		err = query.Where("id = ? or username LIKE ? or email LIKE ? or display_name LIKE ?", keyword, keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
 	} else {
-		err = DB.Omit("password", "access_token").Where("username LIKE ? or email LIKE ? or display_name LIKE ?", keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
+		err = query.Where("username LIKE ? or email LIKE ? or display_name LIKE ?", keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
 	}
 	return users, err
 }

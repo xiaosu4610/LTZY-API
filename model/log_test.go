@@ -47,7 +47,7 @@ func TestCostStatistics(t *testing.T) {
 	}
 
 	// 模型维度
-	modelStats, err := GetModelCostStatistics(0, 0, 10)
+	modelStats, err := GetModelCostStatistics(0, 0, 10, 0)
 	if err != nil {
 		t.Fatalf("GetModelCostStatistics 失败：%v", err)
 	}
@@ -63,7 +63,7 @@ func TestCostStatistics(t *testing.T) {
 	}
 
 	// 用户维度
-	userStats, err := GetUserCostStatistics(0, 0, 10)
+	userStats, err := GetUserCostStatistics(0, 0, 10, 0)
 	if err != nil {
 		t.Fatalf("GetUserCostStatistics 失败：%v", err)
 	}
@@ -72,7 +72,7 @@ func TestCostStatistics(t *testing.T) {
 	}
 
 	// 渠道维度
-	channelStats, err := GetChannelStatistics(0, 0)
+	channelStats, err := GetChannelStatistics(0, 0, 0)
 	if err != nil {
 		t.Fatalf("GetChannelStatistics 失败：%v", err)
 	}
@@ -81,7 +81,7 @@ func TestCostStatistics(t *testing.T) {
 	}
 
 	// 日维度
-	dailyStats, err := GetDailyCostStatistics(0, 0)
+	dailyStats, err := GetDailyCostStatistics(0, 0, 0)
 	if err != nil {
 		t.Fatalf("GetDailyCostStatistics 失败：%v", err)
 	}

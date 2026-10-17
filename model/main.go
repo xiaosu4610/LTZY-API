@@ -167,6 +167,11 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&MidjourneyTask{}); err != nil {
 		return err
 	}
+	// 租户表（LTZY-API 新增，C5）：用户表通过 tenant_id 归属到租户，
+	// 令牌与日志的租户归属由 user_id 推导，因此只需建这一张新表。
+	if err = DB.AutoMigrate(&Tenant{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}

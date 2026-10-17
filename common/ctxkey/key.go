@@ -27,4 +27,6 @@ const (
 	TokenDailyLimit   = "token_daily_limit"
 	TokenMonthlyLimit = "token_monthly_limit"
 	TokenAllowedModes = "token_allowed_modes"
+	// 调用者所属租户（LTZY-API 新增，C5）。0 = 平台视角（不隔离，可跨租户查看）。
+	TenantId = "tenant_id"
 )

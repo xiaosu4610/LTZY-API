@@ -107,7 +107,7 @@ func RecordTestLog(ctx context.Context, log *Log) {
 	recordLogHelper(ctx, log)
 }
 
-func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int) (logs []*Log, err error) {
+func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, tenantId int) (logs []*Log, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB
@@ -131,6 +131,11 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	}
 	if channel != 0 {
 		tx = tx.Where("channel_id = ?", channel)
+	}
+	// 租户过滤（C5）：tenantId=0 为平台视角，不过滤
+	tx, err = scopeLogsByTenant(tx, tenantId)
+	if err != nil {
+		return nil, err
 	}
 	err = tx.Order("id desc").Limit(num).Offset(startIdx).Find(&logs).Error
 	return logs, err
@@ -159,8 +164,12 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	return logs, err
 }
 
-func SearchAllLogs(keyword string) (logs []*Log, err error) {
-	err = LOG_DB.Where("type = ? or content LIKE ?", keyword, keyword+"%").Order("id desc").Limit(config.MaxRecentItems).Find(&logs).Error
+func SearchAllLogs(keyword string, tenantId int) (logs []*Log, err error) {
+	tx, err := scopeLogsByTenant(LOG_DB, tenantId)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Where("type = ? or content LIKE ?", keyword, keyword+"%").Order("id desc").Limit(config.MaxRecentItems).Find(&logs).Error
 	return logs, err
 }
 
@@ -240,7 +249,7 @@ type ChannelStatistic struct {
 
 // GetChannelStatistics 按渠道聚合指定时间窗口内的消费日志。
 // startTimestamp / endTimestamp 为 0 时表示不限制该边界。
-func GetChannelStatistics(startTimestamp int64, endTimestamp int64) (stats []*ChannelStatistic, err error) {
+func GetChannelStatistics(startTimestamp int64, endTimestamp int64, tenantId int) (stats []*ChannelStatistic, err error) {
 	ifnull := "ifnull"
 	if common.UsingPostgreSQL {
 		ifnull = "COALESCE"
@@ -251,6 +260,10 @@ func GetChannelStatistics(startTimestamp int64, endTimestamp int64) (stats []*Ch
 			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens, "+
 			"%s(avg(elapsed_time),0) as avg_elapsed_time", ifnull, ifnull, ifnull, ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
+	tx, err = scopeLogsByTenant(tx, tenantId)
+	if err != nil {
+		return nil, err
+	}
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
 	}
@@ -290,7 +303,7 @@ type DailyCostStatistic struct {
 }
 
 // GetModelCostStatistics 按模型聚合指定时间窗口内的成本，按额度降序取前 limit 条。
-func GetModelCostStatistics(startTimestamp int64, endTimestamp int64, limit int) (stats []*ModelCostStatistic, err error) {
+func GetModelCostStatistics(startTimestamp int64, endTimestamp int64, limit int, tenantId int) (stats []*ModelCostStatistic, err error) {
 	ifnull := "ifnull"
 	if common.UsingPostgreSQL {
 		ifnull = "COALESCE"
@@ -301,6 +314,10 @@ func GetModelCostStatistics(startTimestamp int64, endTimestamp int64, limit int)
 			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens",
 			ifnull, ifnull, ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
+	tx, err = scopeLogsByTenant(tx, tenantId)
+	if err != nil {
+		return nil, err
+	}
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
 	}
@@ -316,7 +333,7 @@ func GetModelCostStatistics(startTimestamp int64, endTimestamp int64, limit int)
 }
 
 // GetUserCostStatistics 按用户聚合指定时间窗口内的成本，按额度降序取前 limit 条。
-func GetUserCostStatistics(startTimestamp int64, endTimestamp int64, limit int) (stats []*UserCostStatistic, err error) {
+func GetUserCostStatistics(startTimestamp int64, endTimestamp int64, limit int, tenantId int) (stats []*UserCostStatistic, err error) {
 	ifnull := "ifnull"
 	if common.UsingPostgreSQL {
 		ifnull = "COALESCE"
@@ -325,6 +342,10 @@ func GetUserCostStatistics(startTimestamp int64, endTimestamp int64, limit int) 
 		Select(fmt.Sprintf("user_id, username, count(*) as request_count, %s(sum(quota),0) as quota, "+
 			"%s(sum(cost_quota),0) as cost_quota", ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
+	tx, err = scopeLogsByTenant(tx, tenantId)
+	if err != nil {
+		return nil, err
+	}
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
 	}
@@ -340,7 +361,7 @@ func GetUserCostStatistics(startTimestamp int64, endTimestamp int64, limit int) 
 }
 
 // GetDailyCostStatistics 按天聚合指定时间窗口内的成本，用于趋势图。
-func GetDailyCostStatistics(startTimestamp int64, endTimestamp int64) (stats []*DailyCostStatistic, err error) {
+func GetDailyCostStatistics(startTimestamp int64, endTimestamp int64, tenantId int) (stats []*DailyCostStatistic, err error) {
 	groupSelect := "DATE_FORMAT(FROM_UNIXTIME(created_at), '%Y-%m-%d')"
 	if common.UsingPostgreSQL {
 		groupSelect = "TO_CHAR(date_trunc('day', to_timestamp(created_at)), 'YYYY-MM-DD')"
@@ -358,6 +379,10 @@ func GetDailyCostStatistics(startTimestamp int64, endTimestamp int64) (stats []*
 			"%s(sum(prompt_tokens) + sum(completion_tokens),0) as tokens",
 			groupSelect, ifnull, ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
+	tx, err = scopeLogsByTenant(tx, tenantId)
+	if err != nil {
+		return nil, err
+	}
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
 	}

@@ -55,6 +55,8 @@ func SetApiRouter(router *gin.Engine) {
 			// 改用「权限点」校验（LTZY-API 新增，C4）：内置默认配置下与 AdminAuth 完全等价，
 			// 但管理员可以据此精细调整角色能力，甚至新建自定义角色。
 			adminRoute.Use(middleware.UserAuth())
+			// 用户列表/搜索按租户隔离（LTZY-API 新增，C5）
+			adminRoute.Use(middleware.TenantScope())
 			{
 				adminRoute.GET("/", middleware.PermissionAuth(model.PermUserRead), controller.GetAllUsers)
 				adminRoute.GET("/search", middleware.PermissionAuth(model.PermUserRead), controller.SearchUsers)
@@ -77,6 +79,17 @@ func SetApiRouter(router *gin.Engine) {
 		permissionRoute.Use(middleware.UserAuth())
 		{
 			permissionRoute.GET("/", controller.GetPermissionList)
+		}
+		// 租户管理（LTZY-API 新增，C5）：创建租户与变更归属会直接改变数据可见范围，
+		// 属最高危操作，与系统设置同级，仅 root 可用。
+		tenantRoute := apiRouter.Group("/tenant")
+		tenantRoute.Use(middleware.RootAuth())
+		{
+			tenantRoute.GET("/", controller.GetAllTenants)
+			tenantRoute.GET("/:id", controller.GetTenant)
+			tenantRoute.POST("/", controller.AddTenant)
+			tenantRoute.PUT("/", controller.UpdateTenant)
+			tenantRoute.DELETE("/:id", controller.DeleteTenant)
 		}
 		channelRoute := apiRouter.Group("/channel")
 		channelRoute.Use(middleware.UserAuth())
@@ -118,14 +131,16 @@ func SetApiRouter(router *gin.Engine) {
 			redemptionRoute.DELETE("/:id", middleware.PermissionAuth(model.PermRedemptionWrite), controller.DeleteRedemption)
 		}
 		logRoute := apiRouter.Group("/log")
-		logRoute.GET("/", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.GetAllLogs)
-		logRoute.DELETE("/", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.DeleteHistoryLogs)
-		logRoute.GET("/stat", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.GetLogsStat)
-		logRoute.GET("/cost", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.GetCostAnalysis)
+		// 日志按租户隔离（LTZY-API 新增，C5）：只挂在管理类日志接口上，
+		// /self 系列本来就只返回本人数据，不需要多一次租户查询。
+		logRoute.GET("/", middleware.UserAuth(), middleware.TenantScope(), middleware.PermissionAuth(model.PermLogRead), controller.GetAllLogs)
+		logRoute.DELETE("/", middleware.UserAuth(), middleware.TenantScope(), middleware.PermissionAuth(model.PermLogRead), controller.DeleteHistoryLogs)
+		logRoute.GET("/stat", middleware.UserAuth(), middleware.TenantScope(), middleware.PermissionAuth(model.PermLogRead), controller.GetLogsStat)
+		logRoute.GET("/cost", middleware.UserAuth(), middleware.TenantScope(), middleware.PermissionAuth(model.PermLogRead), controller.GetCostAnalysis)
 		// 审计日志查询（LTZY-API 新增，D4）：与消费日志分开放，避免权限耦合
-		logRoute.GET("/audit", middleware.UserAuth(), middleware.PermissionAuth(model.PermAuditRead), controller.GetAuditLogs)
+		logRoute.GET("/audit", middleware.UserAuth(), middleware.TenantScope(), middleware.PermissionAuth(model.PermAuditRead), controller.GetAuditLogs)
 		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
-		logRoute.GET("/search", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.SearchAllLogs)
+		logRoute.GET("/search", middleware.UserAuth(), middleware.TenantScope(), middleware.PermissionAuth(model.PermLogRead), controller.SearchAllLogs)
 		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogs)
 		logRoute.GET("/self/search", middleware.UserAuth(), controller.SearchUserLogs)
 		groupRoute := apiRouter.Group("/group")

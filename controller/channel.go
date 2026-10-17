@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xiaosu4610/LTZY-API/common/config"
+	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/monitor"
@@ -110,7 +111,7 @@ func GetChannelHealth(c *gin.Context) {
 		})
 		return
 	}
-	stats, err := model.GetChannelStatistics(startTimestamp, 0)
+	stats, err := model.GetChannelStatistics(startTimestamp, 0, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

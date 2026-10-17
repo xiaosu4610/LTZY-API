@@ -191,7 +191,7 @@ func GetAllUsers(c *gin.Context) {
 	}
 
 	order := c.DefaultQuery("order", "")
-	users, err := model.GetAllUsers(p*config.ItemsPerPage, config.ItemsPerPage, order)
+	users, err := model.GetAllUsers(p*config.ItemsPerPage, config.ItemsPerPage, order, c.GetInt(ctxkey.TenantId))
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -210,7 +210,7 @@ func GetAllUsers(c *gin.Context) {
 
 func SearchUsers(c *gin.Context) {
 	keyword := c.Query("keyword")
-	users, err := model.SearchUsers(keyword)
+	users, err := model.SearchUsers(keyword, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -567,11 +567,43 @@ func CreateUser(c *gin.Context) {
 		})
 		return
 	}
+	// 租户归属（LTZY-API 新增，C5）：只有 root 能创建平台用户（tenant_id=0）
+	// 或指到任意租户；非 root 只能建自己租户的用户。
+	//
+	// tenant_id 为 0 时一律按调用者自己的租户处理，原因有二：
+	//   1) 前端"建用户"表单通常不带这个字段，缺省值就是 0，若因此报错会破坏正常流程；
+	//   2) 这样处理不会提权 —— 用户仍然落在调用者自己的租户里。
+	// 但显式指定了**别的非零租户**时必须拒绝：那不是笔误，而是试图越界。
+	tenantId := user.TenantId
+	if myRole != model.RoleRootUser {
+		callerTenant := c.GetInt(ctxkey.TenantId)
+		if tenantId != 0 && tenantId != callerTenant {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "只能在自己所属租户内创建用户",
+			})
+			return
+		}
+		tenantId = callerTenant
+	}
+	if tenantId != 0 {
+		if _, err := model.GetTenantById(tenantId); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "指定的租户不存在",
+			})
+			return
+		}
+	}
 	// Even for admin users, we cannot fully trust them!
 	cleanUser := model.User{
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
+		// 原版此处只拷 3 个字段，导致请求里的 role 被静默丢弃；
+		// 这里显式带上角色与租户，否则 C4 的自定义角色、C5 的租户归属都无法在创建时指定。
+		Role:     user.Role,
+		TenantId: tenantId,
 	}
 	if err := cleanUser.Insert(ctx, 0); err != nil {
 		c.JSON(http.StatusOK, gin.H{

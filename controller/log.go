@@ -25,7 +25,7 @@ func GetAllLogs(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
 	channel, _ := strconv.Atoi(c.Query("channel"))
-	logs, err := model.GetAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, p*config.ItemsPerPage, config.ItemsPerPage, channel)
+	logs, err := model.GetAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, p*config.ItemsPerPage, config.ItemsPerPage, channel, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -70,7 +70,7 @@ func GetUserLogs(c *gin.Context) {
 
 func SearchAllLogs(c *gin.Context) {
 	keyword := c.Query("keyword")
-	logs, err := model.SearchAllLogs(keyword)
+	logs, err := model.SearchAllLogs(keyword, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -161,22 +161,22 @@ func GetCostAnalysis(c *gin.Context) {
 	}
 	startTimestamp := helper.GetTimestamp() - int64(hours)*3600
 
-	modelStats, err := model.GetModelCostStatistics(startTimestamp, 0, top)
+	modelStats, err := model.GetModelCostStatistics(startTimestamp, 0, top, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
-	userStats, err := model.GetUserCostStatistics(startTimestamp, 0, top)
+	userStats, err := model.GetUserCostStatistics(startTimestamp, 0, top, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
-	channelStats, err := model.GetChannelStatistics(startTimestamp, 0)
+	channelStats, err := model.GetChannelStatistics(startTimestamp, 0, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
-	dailyStats, err := model.GetDailyCostStatistics(startTimestamp, 0)
+	dailyStats, err := model.GetDailyCostStatistics(startTimestamp, 0, c.GetInt(ctxkey.TenantId))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
