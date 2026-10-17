@@ -224,6 +224,34 @@ func SyncChannelCache(frequency int) {
 	}
 }
 
+// channelCacheInvalidateChan 用于异步触发渠道缓存刷新（LTZY-API 新增）。
+// 缓冲为 1 的通道天然起到「合并抖动」的作用：短时间内多次变更只会触发一次重建。
+var channelCacheInvalidateChan = make(chan struct{}, 1)
+
+func init() {
+	go func() {
+		for range channelCacheInvalidateChan {
+			InitChannelCache()
+		}
+	}()
+}
+
+// InvalidateChannelCache 通知内存中的渠道缓存失效并尽快重建。
+//
+// 背景：原先只有 InitChannelCache 的全量同步（默认 SYNC_FREQUENCY 周期），
+// 管理员新增/修改/停用渠道后，最长要等一个周期才生效，用户可能继续打到已停用的渠道。
+// 现在写操作完成后立即异步刷新，既保证生效及时，又避免同步等待数据库。
+func InvalidateChannelCache() {
+	if !config.MemoryCacheEnabled {
+		return
+	}
+	select {
+	case channelCacheInvalidateChan <- struct{}{}:
+	default:
+		// 已有待处理的刷新任务，跳过即可（合并重复刷新）
+	}
+}
+
 func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
 	if !config.MemoryCacheEnabled {
 		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority)

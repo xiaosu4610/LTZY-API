@@ -131,6 +131,9 @@ func (channel *Channel) Insert() error {
 		return err
 	}
 	err = channel.AddAbilities()
+	if err == nil {
+		InvalidateChannelCache()
+	}
 	return err
 }
 
@@ -142,6 +145,9 @@ func (channel *Channel) Update() error {
 	}
 	DB.Model(channel).First(channel, "id = ?", channel.Id)
 	err = channel.UpdateAbilities()
+	if err == nil {
+		InvalidateChannelCache()
+	}
 	return err
 }
 
@@ -172,6 +178,9 @@ func (channel *Channel) Delete() error {
 		return err
 	}
 	err = channel.DeleteAbilities()
+	if err == nil {
+		InvalidateChannelCache()
+	}
 	return err
 }
 
@@ -195,7 +204,9 @@ func UpdateChannelStatusById(id int, status int) {
 	err = DB.Model(&Channel{}).Where("id = ?", id).Update("status", status).Error
 	if err != nil {
 		logger.SysError("failed to update channel status: " + err.Error())
+		return
 	}
+	InvalidateChannelCache()
 }
 
 func UpdateChannelUsedQuota(id int, quota int64) {
@@ -215,10 +226,16 @@ func updateChannelUsedQuota(id int, quota int64) {
 
 func DeleteChannelByStatus(status int64) (int64, error) {
 	result := DB.Where("status = ?", status).Delete(&Channel{})
+	if result.Error == nil && result.RowsAffected > 0 {
+		InvalidateChannelCache()
+	}
 	return result.RowsAffected, result.Error
 }
 
 func DeleteDisabledChannel() (int64, error) {
 	result := DB.Where("status = ? or status = ?", ChannelStatusAutoDisabled, ChannelStatusManuallyDisabled).Delete(&Channel{})
+	if result.Error == nil && result.RowsAffected > 0 {
+		InvalidateChannelCache()
+	}
 	return result.RowsAffected, result.Error
 }
