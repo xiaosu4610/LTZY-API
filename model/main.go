@@ -157,6 +157,9 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Log{}); err != nil {
 		return err
 	}
+	if err = DB.AutoMigrate(&AuditLog{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}
@@ -208,6 +211,9 @@ func InitLogDB() {
 func migrateLOGDB() error {
 	var err error
 	if err = LOG_DB.AutoMigrate(&Log{}); err != nil {
+		return err
+	}
+	if err = LOG_DB.AutoMigrate(&AuditLog{}); err != nil {
 		return err
 	}
 	return nil

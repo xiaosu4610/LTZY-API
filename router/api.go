@@ -66,7 +66,8 @@ func SetApiRouter(router *gin.Engine) {
 		optionRoute.Use(middleware.RootAuth())
 		{
 			optionRoute.GET("/", controller.GetOptions)
-			optionRoute.PUT("/", controller.UpdateOption)
+			// 系统设置写入是最高危操作，审计记录谁改了哪个配置（D4）
+			optionRoute.PUT("/", middleware.AuditOptionUpdate(), controller.UpdateOption)
 		}
 		channelRoute := apiRouter.Group("/channel")
 		channelRoute.Use(middleware.AdminAuth())
@@ -80,10 +81,11 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.GET("/test/:id", controller.TestChannel)
 			channelRoute.GET("/update_balance", controller.UpdateAllChannelsBalance)
 			channelRoute.GET("/update_balance/:id", controller.UpdateChannelBalance)
-			channelRoute.POST("/", controller.AddChannel)
-			channelRoute.PUT("/", controller.UpdateChannel)
-			channelRoute.DELETE("/disabled", controller.DeleteDisabledChannel)
-			channelRoute.DELETE("/:id", controller.DeleteChannel)
+			// 渠道含上游密钥，增删改全部审计（body 中 key 字段已脱敏）
+			channelRoute.POST("/", middleware.AuditAction("channel.create", ""), controller.AddChannel)
+			channelRoute.PUT("/", middleware.AuditAction("channel.update", ""), controller.UpdateChannel)
+			channelRoute.DELETE("/disabled", middleware.AuditAction("channel.delete_disabled", ""), controller.DeleteDisabledChannel)
+			channelRoute.DELETE("/:id", middleware.AuditActionFromParam("channel.delete", "id"), controller.DeleteChannel)
 		}
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())
@@ -91,9 +93,10 @@ func SetApiRouter(router *gin.Engine) {
 			tokenRoute.GET("/", controller.GetAllTokens)
 			tokenRoute.GET("/search", controller.SearchTokens)
 			tokenRoute.GET("/:id", controller.GetToken)
-			tokenRoute.POST("/", controller.AddToken)
-			tokenRoute.PUT("/", controller.UpdateToken)
-			tokenRoute.DELETE("/:id", controller.DeleteToken)
+			// 令牌增删改审计：令牌是计费凭据，误删/恶意创建需要可回溯
+			tokenRoute.POST("/", middleware.AuditAction("token.create", ""), controller.AddToken)
+			tokenRoute.PUT("/", middleware.AuditAction("token.update", ""), controller.UpdateToken)
+			tokenRoute.DELETE("/:id", middleware.AuditActionFromParam("token.delete", "id"), controller.DeleteToken)
 		}
 		redemptionRoute := apiRouter.Group("/redemption")
 		redemptionRoute.Use(middleware.AdminAuth())
@@ -110,6 +113,8 @@ func SetApiRouter(router *gin.Engine) {
 		logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
 		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
 		logRoute.GET("/cost", middleware.AdminAuth(), controller.GetCostAnalysis)
+		// 审计日志查询（LTZY-API 新增，D4）：与消费日志分开放，避免权限耦合
+		logRoute.GET("/audit", middleware.AdminAuth(), controller.GetAuditLogs)
 		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
 		logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
 		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogs)
