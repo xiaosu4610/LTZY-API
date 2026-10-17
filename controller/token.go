@@ -117,6 +117,9 @@ func validateToken(c *gin.Context, token model.Token) error {
 			return fmt.Errorf("无效的网段：%s", err.Error())
 		}
 	}
+	if token.Rpm < 0 || token.Tpm < 0 {
+		return fmt.Errorf("限速值不能为负数")
+	}
 	return nil
 }
 
@@ -239,6 +242,8 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.UnlimitedQuota = token.UnlimitedQuota
 		cleanToken.Models = token.Models
 		cleanToken.Subnet = token.Subnet
+		cleanToken.Rpm = token.Rpm
+		cleanToken.Tpm = token.Tpm
 	}
 	err = cleanToken.Update()
 	if err != nil {

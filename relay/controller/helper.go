@@ -16,6 +16,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
+	"github.com/xiaosu4610/LTZY-API/middleware"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
 	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
@@ -94,7 +95,9 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 	return preConsumedQuota, nil
 }
 
-func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool) {
+// postConsumeQuota 结算本次请求额度。
+// tokenTpm 为本令牌的每分钟 token 上限（0 表示不限制），用于 TPM 统计（LTZY-API 新增）。
+func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool, tokenTpm int) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
@@ -138,6 +141,8 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	})
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+	// 记录令牌本分钟 token 消耗（LTZY-API 新增，用于 TPM 统计/告警）
+	middleware.RecordTokenTPM(meta.TokenId, tokenTpm, totalTokens)
 }
 
 func getMappedModelName(modelName string, mapping map[string]string) (string, bool) {

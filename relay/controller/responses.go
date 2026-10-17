@@ -15,8 +15,10 @@ import (
 
 	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/config"
+	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
+	"github.com/xiaosu4610/LTZY-API/middleware"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/relay"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
@@ -108,7 +110,7 @@ func RelayResponsesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		}
 		// 流式响应在转发过程中难以稳定拿到最终 usage，这里以预扣为准不做二次结算。
 		// 预扣额度即为本次消费（兜底），后续可增强为解析 SSE 中的 response.completed 事件。
-		go postConsumeResponsesQuota(ctx, meta, probe.Model, ratio, preConsumedQuota, 0, 0, modelRatio, groupRatio)
+		go postConsumeResponsesQuota(ctx, meta, probe.Model, ratio, preConsumedQuota, 0, 0, modelRatio, groupRatio, c.GetInt(ctxkey.TokenTpm))
 		return nil
 	}
 
@@ -123,7 +125,7 @@ func RelayResponsesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		promptTokens = usage.InputTokens
 		completionTokens = usage.OutputTokens
 	}
-	go postConsumeResponsesQuota(ctx, meta, probe.Model, ratio, preConsumedQuota, promptTokens, completionTokens, modelRatio, groupRatio)
+	go postConsumeResponsesQuota(ctx, meta, probe.Model, ratio, preConsumedQuota, promptTokens, completionTokens, modelRatio, groupRatio, c.GetInt(ctxkey.TokenTpm))
 	return nil
 }
 
@@ -207,7 +209,7 @@ func preConsumeResponsesQuota(ctx context.Context, ratio float64, meta *meta.Met
 	return preConsumedQuota, nil
 }
 
-func postConsumeResponsesQuota(ctx context.Context, meta *meta.Meta, modelName string, ratio float64, preConsumedQuota int64, promptTokens int, completionTokens int, modelRatio float64, groupRatio float64) {
+func postConsumeResponsesQuota(ctx context.Context, meta *meta.Meta, modelName string, ratio float64, preConsumedQuota int64, promptTokens int, completionTokens int, modelRatio float64, groupRatio float64, tokenTpm int) {
 	completionRatio := billingratio.GetCompletionRatio(modelName, meta.ChannelType)
 	quota := int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
 	if quota <= 0 {
@@ -239,4 +241,6 @@ func postConsumeResponsesQuota(ctx context.Context, meta *meta.Meta, modelName s
 	})
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+	// 记录令牌本分钟 token 消耗（LTZY-API 新增）
+	middleware.RecordTokenTPM(meta.TokenId, tokenTpm, promptTokens+completionTokens)
 }

@@ -15,8 +15,10 @@ import (
 
 	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/config"
+	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
+	"github.com/xiaosu4610/LTZY-API/middleware"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/relay"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
@@ -106,7 +108,7 @@ func RelayRerankHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 		CompletionTokens: 0,
 		TotalTokens:      promptTokens,
 	}
-	go postConsumeRerankQuota(ctx, usage, meta, rerankRequest.Model, ratio, preConsumedQuota, modelRatio, groupRatio)
+	go postConsumeRerankQuota(ctx, usage, meta, rerankRequest.Model, ratio, preConsumedQuota, modelRatio, groupRatio, c.GetInt(ctxkey.TokenTpm))
 	return nil
 }
 
@@ -155,7 +157,7 @@ func preConsumeRerankQuota(ctx context.Context, promptTokens int, ratio float64,
 	return preConsumedQuota, nil
 }
 
-func postConsumeRerankQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, modelName string, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64) {
+func postConsumeRerankQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, modelName string, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, tokenTpm int) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
@@ -186,4 +188,6 @@ func postConsumeRerankQuota(ctx context.Context, usage *relaymodel.Usage, meta *
 	})
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+	// 记录令牌本分钟 token 消耗（LTZY-API 新增）
+	middleware.RecordTokenTPM(meta.TokenId, tokenTpm, usage.PromptTokens)
 }

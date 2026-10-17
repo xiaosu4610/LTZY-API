@@ -9,6 +9,7 @@ import {
     Checkbox,
     DatePicker,
     Input,
+    InputNumber,
     Select,
     SideSheet,
     Space,
@@ -257,6 +258,30 @@ const EditToken = (props) => {
               }}>一天</Button>
             </Space>
           </div>
+
+          <Divider />
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>每分钟请求数上限（RPM，0 表示不限）</Typography.Text>
+          </div>
+          <InputNumber
+            style={{ marginTop: 8, width: '100%' }}
+            name="rpm"
+            placeholder={'例如 60'}
+            min={0}
+            onChange={(value) => handleInputChange('rpm', value || 0)}
+            value={inputs.rpm || 0}
+          />
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>每分钟 Token 上限（TPM，0 表示不限）</Typography.Text>
+          </div>
+          <InputNumber
+            style={{ marginTop: 8, width: '100%' }}
+            name="tpm"
+            placeholder={'例如 100000'}
+            min={0}
+            onChange={(value) => handleInputChange('tpm', value || 0)}
+            value={inputs.tpm || 0}
+          />
 
           <Divider />
           <Banner type={'warning'}
