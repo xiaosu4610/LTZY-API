@@ -59,6 +59,13 @@ const ALLOWED_MODE_OPTIONS = [
   { key: 'assistants', labelKey: 'token.edit.modes.assistants', endpoint: '/v1/assistants', value: 'assistants' },
   { key: 'threads', labelKey: 'token.edit.modes.threads', endpoint: '/v1/threads', value: 'threads' },
   { key: 'models', labelKey: 'token.edit.modes.models', endpoint: '/v1/models/{model}', value: 'models' },
+  // A5 声音复刻/音色管理
+  {
+    key: 'audio_voice',
+    labelKey: 'token.edit.modes.audio_voice',
+    endpoint: '/v1/audio/voices',
+    value: 'audio_voice',
+  },
 ];
 
 const EditToken = () => {

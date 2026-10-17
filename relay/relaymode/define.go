@@ -32,4 +32,11 @@ const (
 	// Models is for DELETE /v1/models/{model}（删除微调模型）。
 	// 注意：它**不包含** /v1/models 列表接口 —— 列表由本机管理接口提供，不经过中继。
 	Models
+	// AudioVoice is for 声音复刻/音色管理（/v1/audio/voices...，LTZY-API 新增 A5）。
+	//
+	// 为什么也走透传：各家上游的音色接口形状差异很大（有的叫 voices、有的叫
+	// voice/clone、有的要求 multipart 上传参考音频），网关**不应该**去理解这些语义，
+	// 否则每接一家就要写一套适配。这里只负责鉴权、限流、计费与转发，
+	// 具体路径由管理员在渠道 BaseURL 上决定。这类请求不产生 token 用量，故默认不计费。
+	AudioVoice
 )

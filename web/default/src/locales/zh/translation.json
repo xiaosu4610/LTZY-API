@@ -216,7 +216,8 @@
         "fine_tuning": "微调任务",
         "assistants": "助手",
         "threads": "会话线程",
-        "models": "模型管理"
+        "models": "模型管理",
+        "audio_voice": "声音复刻"
       },
       "rpm": "每分钟请求数上限（RPM，0 表示不限）",
       "rpm_placeholder": "例如 60",

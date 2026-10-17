@@ -24,6 +24,10 @@ func GetByPath(path string) int {
 		relayMode = AudioTranscription
 	} else if strings.HasPrefix(path, "/v1/audio/translations") {
 		relayMode = AudioTranslation
+	} else if strings.HasPrefix(path, "/v1/audio/voices") {
+		// 声音复刻/音色管理（A5）。必须放在 audio 系列判断之后、且前缀互不重叠，
+		// 否则 /v1/audio/voices 会被 speech/transcriptions 等分支抢先匹配。
+		relayMode = AudioVoice
 	} else if strings.HasPrefix(path, "/v1/rerank") {
 		relayMode = Rerank
 	} else if strings.HasPrefix(path, "/v1/responses") {
@@ -56,7 +60,7 @@ func GetByPath(path string) int {
 // 渠道选择与计费口径上，所以用一个判定函数集中表达，避免各处散落 switch。
 func IsPassthrough(mode int) bool {
 	switch mode {
-	case Files, FineTuning, Assistants, Threads, Models:
+	case Files, FineTuning, Assistants, Threads, Models, AudioVoice:
 		return true
 	}
 	return false

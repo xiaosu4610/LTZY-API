@@ -38,6 +38,14 @@ func SetRelayRouter(router *gin.Engine) {
 		relayV1Router.POST("/audio/transcriptions", controller.Relay)
 		relayV1Router.POST("/audio/translations", controller.Relay)
 		relayV1Router.POST("/audio/speech", controller.Relay)
+		// A5 声音复刻/音色管理：与 A6 同一套透传机制。
+		// 上游各家路径不统一，故这里采用「协议中立」的 /v1/audio/voices 家族，
+		// 由渠道 BaseURL 决定真正打到哪个上游路径。
+		relayV1Router.GET("/audio/voices", controller.Relay)
+		relayV1Router.POST("/audio/voices", controller.Relay)
+		relayV1Router.GET("/audio/voices/:id", controller.Relay)
+		relayV1Router.DELETE("/audio/voices/:id", controller.Relay)
+		relayV1Router.POST("/audio/voices/:id/clone", controller.Relay)
 		// A6：以下端点由 501 占位改为原样透传中继（请求体原样转发、响应体含错误原样回传）
 		relayV1Router.GET("/files", controller.Relay)
 		relayV1Router.POST("/files", controller.Relay)

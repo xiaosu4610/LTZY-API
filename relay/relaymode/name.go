@@ -27,6 +27,8 @@ var modeNames = map[int]string{
 	Assistants: "assistants",
 	Threads:    "threads",
 	Models:     "models",
+	// A5 声音复刻 / 音色管理
+	AudioVoice: "audio_voice",
 }
 
 // ModeName2Mode 反查表，用于校验管理员填写的中继模式名是否合法。

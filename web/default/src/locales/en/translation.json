@@ -216,7 +216,8 @@
         "fine_tuning": "Fine-tuning",
         "assistants": "Assistants",
         "threads": "Threads",
-        "models": "Model management"
+        "models": "Model management",
+        "audio_voice": "Voice cloning"
       },
       "rpm": "Requests Per Minute Limit (RPM, 0 = unlimited)",
       "rpm_placeholder": "e.g. 60",
