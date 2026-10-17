@@ -282,6 +282,17 @@ const EditToken = (props) => {
             onChange={(value) => handleInputChange('tpm', value || 0)}
             value={inputs.tpm || 0}
           />
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>并发请求数上限（0 表示不限）</Typography.Text>
+          </div>
+          <InputNumber
+            style={{ marginTop: 8, width: '100%' }}
+            name="concurrency"
+            placeholder={'例如 10'}
+            min={0}
+            onChange={(value) => handleInputChange('concurrency', value || 0)}
+            value={inputs.concurrency || 0}
+          />
 
           <Divider />
           <Banner type={'warning'}

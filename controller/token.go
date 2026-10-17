@@ -120,6 +120,9 @@ func validateToken(c *gin.Context, token model.Token) error {
 	if token.Rpm < 0 || token.Tpm < 0 {
 		return fmt.Errorf("限速值不能为负数")
 	}
+	if token.Concurrency < 0 {
+		return fmt.Errorf("并发上限不能为负数")
+	}
 	return nil
 }
 
@@ -153,6 +156,11 @@ func AddToken(c *gin.Context) {
 		UnlimitedQuota: token.UnlimitedQuota,
 		Models:         token.Models,
 		Subnet:         token.Subnet,
+		// 限速与并发配置（LTZY-API 修复）：此前漏传，导致新建令牌时前端填写的
+		// RPM/TPM 被静默丢弃，只有编辑才生效
+		Rpm:         token.Rpm,
+		Tpm:         token.Tpm,
+		Concurrency: token.Concurrency,
 	}
 	err = cleanToken.Insert()
 	if err != nil {

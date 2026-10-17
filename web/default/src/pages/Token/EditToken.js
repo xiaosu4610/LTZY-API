@@ -34,6 +34,7 @@ const EditToken = () => {
     subnet: '',
     rpm: 0,
     tpm: 0,
+    concurrency: 0,
   };
   const [inputs, setInputs] = useState(originInputs);
   const { name, remain_quota, expired_time, unlimited_quota } = inputs;
@@ -219,6 +220,16 @@ const EditToken = () => {
                   placeholder='例如 100000'
                   onChange={handleInputChange}
                   value={inputs.tpm}
+                  autoComplete='new-password'
+                  type='number'
+                  min='0'
+                />
+                <Form.Input
+                  label='并发请求数上限（0 表示不限）'
+                  name='concurrency'
+                  placeholder='例如 10'
+                  onChange={handleInputChange}
+                  value={inputs.concurrency}
                   autoComplete='new-password'
                   type='number'
                   min='0'

@@ -23,4 +23,7 @@ const (
 	SystemPrompt      = "system_prompt"
 	TokenRpm          = "token_rpm"
 	TokenTpm          = "token_tpm"
+	TokenConcurrency  = "token_concurrency"
+	UserDailyLimit    = "user_daily_limit"
+	UserMonthlyLimit  = "user_monthly_limit"
 )

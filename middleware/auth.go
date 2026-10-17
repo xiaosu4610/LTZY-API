@@ -134,6 +134,8 @@ func TokenAuth() func(c *gin.Context) {
 		c.Set(ctxkey.TokenName, token.Name)
 		c.Set(ctxkey.TokenRpm, token.Rpm)
 		c.Set(ctxkey.TokenTpm, token.Tpm)
+		// 令牌并发上限（LTZY-API 新增，C2）
+		c.Set(ctxkey.TokenConcurrency, token.Concurrency)
 		if len(parts) > 1 {
 			if model.IsAdmin(token.UserId) {
 				c.Set(ctxkey.SpecificChannelId, parts[1])
