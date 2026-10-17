@@ -111,6 +111,12 @@ export interface ChannelHealth {
   sample_count: number;
 }
 
+/** GET /api/channel/health 的响应体：条目包在 items 里 */
+export interface ChannelHealthResponse {
+  hours: number;
+  items: ChannelHealth[];
+}
+
 export interface ModelCostStat {
   model_name: string;
   request_count: number;

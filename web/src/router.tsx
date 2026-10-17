@@ -114,6 +114,8 @@ const consoleLayoutRoute = createRoute({
   component: ConsoleLayout,
 });
 
+// 后台子路由统一挂在 /console 前缀下，必须与侧边栏链接（shell.tsx）保持一致，
+// 否则链接会落到 $ 兜底路由，表现为「点哪个页面都提示不存在」。
 function page(path: string, component: () => ReactNode) {
   return createRoute({
     getParentRoute: () => consoleLayoutRoute,
@@ -122,16 +124,16 @@ function page(path: string, component: () => ReactNode) {
   });
 }
 
-const consoleIndexRoute = page('/', DashboardPage);
-const tokensRoute = page('/tokens', TokensPage);
-const channelsRoute = page('/channels', ChannelsPage);
-const usersRoute = page('/users', UsersPage);
-const logsRoute = page('/logs', LogsPage);
-const operationsRoute = page('/operations', OperationsPage);
-const redemptionsRoute = page('/redemptions', RedemptionsPage);
-const topupRoute = page('/topup', TopupPage);
-const settingRoute = page('/setting', SettingPage);
-const profileRoute = page('/profile', ProfilePage);
+const consoleIndexRoute = page('/console', DashboardPage);
+const tokensRoute = page('/console/tokens', TokensPage);
+const channelsRoute = page('/console/channels', ChannelsPage);
+const usersRoute = page('/console/users', UsersPage);
+const logsRoute = page('/console/logs', LogsPage);
+const operationsRoute = page('/console/operations', OperationsPage);
+const redemptionsRoute = page('/console/redemptions', RedemptionsPage);
+const topupRoute = page('/console/topup', TopupPage);
+const settingRoute = page('/console/setting', SettingPage);
+const profileRoute = page('/console/profile', ProfilePage);
 
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,

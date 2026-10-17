@@ -90,10 +90,12 @@ export default function SettingPage() {
     queryFn: () => getData<OptionItem[]>('/api/option/'),
   });
 
-  const { data: restartRequired } = useQuery({
+  const { data: restartData } = useQuery({
     queryKey: ['restart-required'],
-    queryFn: () => getData<string[]>('/api/option/restart_required'),
+    // 后端返回 { items, count }，之前当成裸数组用会让整页 .some 崩掉
+    queryFn: () => getData<{ items: string[]; count: number }>('/api/option/restart_required'),
   });
+  const restartRequired = restartData?.items ?? [];
 
   useEffect(() => {
     if (!data) return;

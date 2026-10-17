@@ -17,7 +17,7 @@ import { getData } from '@/lib/api';
 import { useAppStore } from '@/stores/app';
 import { formatNumber, formatPercent, formatQuota } from '@/lib/format';
 import { channelTypeName } from '@/lib/channel-types';
-import type { ChannelHealth, CostAnalysis } from '@/lib/types';
+import type { ChannelHealth, ChannelHealthResponse, CostAnalysis } from '@/lib/types';
 import { Badge, Card, CardBody, CardHeader, Empty, Skeleton } from '@/components/ui/card';
 import { Select } from '@/components/ui/input';
 import { PageHeader, StatCard } from '@/components/ui/page';
@@ -42,14 +42,15 @@ export default function OperationsPage() {
 
   const health = useQuery({
     queryKey: ['channel-health', hours],
-    queryFn: () => getData<ChannelHealth[]>('/api/channel/health', { hours }),
+    // 后端返回的是 { hours, items } 包装对象，不是裸数组（写错会让整页 .map 崩掉）
+    queryFn: () => getData<ChannelHealthResponse>('/api/channel/health', { hours }),
   });
 
   const summary = cost.data?.summary;
   const daily = cost.data?.daily ?? [];
   const models = cost.data?.models ?? [];
   const users = cost.data?.users ?? [];
-  const channels = health.data ?? [];
+  const channels = health.data?.items ?? [];
 
   const trend = daily.map((d) => ({
     day: d.day,
