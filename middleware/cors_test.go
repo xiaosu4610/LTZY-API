@@ -12,8 +12,8 @@ func TestParseCorsAllowOrigins(t *testing.T) {
 	}{
 		{"", nil},
 		{"   ", nil},
-		{"https://ltzy.top", []string{"https://ltzy.top"}},
-		{"https://ltzy.top , https://admin.ltzy.top/", []string{"https://ltzy.top", "https://admin.ltzy.top"}},
+		{"https://example.com", []string{"https://example.com"}},
+		{"https://example.com , https://admin.example.com/", []string{"https://example.com", "https://admin.example.com"}},
 		{"a,  ,b,", []string{"a", "b"}},
 	}
 	for _, c := range cases {
