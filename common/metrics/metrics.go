@@ -9,7 +9,9 @@
 //   - 渠道健康度：滑动窗口成功率与采样数（复用 monitor 的内存窗口）
 //   - 进程基础信息：版本 / 启动时间 / Go 运行时指标
 //
-// 一期做进程内存计数器（单实例部署足够）；多实例共享指标（D8）后续接入 Redis。
+// 默认是进程内存计数器（单实例部署足够，且零 Redis 依赖）；
+// 启用 Redis 后同一份计数会额外写入共享存储，供多实例汇总（D8，见 redis.go）。
+// 注意：内存计数在两种模式下都会维护，它是 Redis 不可用时的降级数据源。
 package metrics
 
 import (
@@ -43,7 +45,6 @@ type relayCounters struct {
 // channelId 为 0 表示请求在渠道分配前就失败（鉴权/限流/无可用渠道）。
 func RecordRelay(channelId int, success bool) {
 	relayMutex.Lock()
-	defer relayMutex.Unlock()
 	c, ok := relayByChannel[channelId]
 	if !ok {
 		c = &relayCounters{}
@@ -55,18 +56,25 @@ func RecordRelay(channelId int, success bool) {
 	} else {
 		c.fail++
 	}
+	// 显式解锁而不是 defer：下面的 Redis 写入是网络 I/O，
+	// 持锁会把它串行化到所有渠道的中继请求上
+	relayMutex.Unlock()
+
+	recordRelayRedis(channelId, success)
 }
 
 // RecordRelayQuota 累计一次中继请求消耗的额度（结算时调用，可能为负=退还预扣）。
 func RecordRelayQuota(channelId int, quota int64) {
 	relayMutex.Lock()
-	defer relayMutex.Unlock()
 	c, ok := relayByChannel[channelId]
 	if !ok {
 		c = &relayCounters{}
 		relayByChannel[channelId] = c
 	}
 	c.quota += quota
+	relayMutex.Unlock()
+
+	recordRelayQuotaRedis(channelId, quota)
 }
 
 // SetRelayLastFail 记录最近一次失败原因（截断到 120 字节）。
@@ -75,17 +83,25 @@ func SetRelayLastFail(channelId int, reason string) {
 		reason = reason[:120]
 	}
 	relayMutex.Lock()
-	defer relayMutex.Unlock()
 	c, ok := relayByChannel[channelId]
 	if !ok {
 		c = &relayCounters{}
 		relayByChannel[channelId] = c
 	}
 	c.lastFail = reason
+	relayMutex.Unlock()
+
+	setRelayLastFailRedis(channelId, reason)
 }
 
 // SnapshotRelay 返回当前按渠道聚合的指标快照（channelId -> total/success/fail/quota），并发安全。
+// 启用 Redis 时返回所有实例的汇总值；未启用或读取失败时回落为本进程内存计数。
+// 注意这里不做「内存 + Redis」合并：内存计数在 Redis 可用时已经写进共享数据，
+// 合并会把本实例的计数重复计算，宁可少算也不能多算。
 func SnapshotRelay() map[int]map[string]int64 {
+	if out, ok := snapshotRelayRedis(); ok {
+		return out
+	}
 	relayMutex.RLock()
 	defer relayMutex.RUnlock()
 	out := make(map[int]map[string]int64, len(relayByChannel))
@@ -101,7 +117,11 @@ func SnapshotRelay() map[int]map[string]int64 {
 }
 
 // GetRelayLastFail 返回某渠道最近一次失败原因。
+// 启用 Redis 时优先读共享值（可能是别的实例记下的），读不到再回落本进程内存。
 func GetRelayLastFail(channelId int) string {
+	if reason, ok := getRelayLastFailRedis(channelId); ok {
+		return reason
+	}
 	relayMutex.RLock()
 	defer relayMutex.RUnlock()
 	if c, ok := relayByChannel[channelId]; ok {
