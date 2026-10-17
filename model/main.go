@@ -172,6 +172,11 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Tenant{}); err != nil {
 		return err
 	}
+	// 配置变更历史表（LTZY-API 新增，E9）：落主库而不是日志库 ——
+	// 它必须与配置一起备份/一起回滚，否则"回滚能力"会随日志清理一起消失。
+	if err = DB.AutoMigrate(&OptionHistory{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}

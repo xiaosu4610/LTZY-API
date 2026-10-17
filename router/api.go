@@ -73,6 +73,11 @@ func SetApiRouter(router *gin.Engine) {
 			optionRoute.GET("/", controller.GetOptions)
 			// 系统设置写入是最高危操作，审计记录谁改了哪个配置（D4）
 			optionRoute.PUT("/", middleware.AuditOptionUpdate(), controller.UpdateOption)
+			// 配置版本与回滚（LTZY-API 新增，E9）：历史查询 / 按记录回滚 / 需重启生效清单。
+			// 只新增路由，不改动既有路由的行为；鉴权沿用本分组的 RootAuth。
+			optionRoute.GET("/history", controller.GetOptionHistory)
+			optionRoute.POST("/rollback", controller.RollbackOption)
+			optionRoute.GET("/restart_required", controller.GetRestartRequiredOptions)
 		}
 		// 权限点清单与本人权限（LTZY-API 新增，C4）：前端据此控制菜单与按钮显隐
 		permissionRoute := apiRouter.Group("/permission")
