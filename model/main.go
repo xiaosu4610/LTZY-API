@@ -163,6 +163,10 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&QuotaBudget{}); err != nil {
 		return err
 	}
+	// Midjourney 任务表（LTZY-API 新增，A4）
+	if err = DB.AutoMigrate(&MidjourneyTask{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}

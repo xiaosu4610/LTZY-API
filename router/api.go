@@ -124,5 +124,21 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			groupRoute.GET("/", controller.GetGroups)
 		}
+		// Midjourney 任务（LTZY-API 新增，A4）
+		// 用 UserAuth 而非 TokenAuth：这些接口按「会话用户」扣费、且只能操作本人任务，
+		// 与 /api/token、/api/log/self 一致；TokenAuth 是 /v1 中继的 API Key 鉴权，语义不同。
+		mjRoute := apiRouter.Group("/mj")
+		mjRoute.Use(middleware.UserAuth())
+		{
+			mjRoute.POST("/submit", controller.SubmitMidjourneyTask)
+			mjRoute.GET("/tasks", controller.GetUserMidjourneyTasks)
+			mjRoute.GET("/task/:id/fetch", controller.FetchMidjourneyTask)
+		}
+		// 管理面任务排查：只有管理员能看全站任务（用户侧接口已强制按 userId 过滤）
+		mjAdminRoute := apiRouter.Group("/mj/admin")
+		mjAdminRoute.Use(middleware.AdminAuth())
+		{
+			mjAdminRoute.GET("/tasks", controller.GetAllMidjourneyTasks)
+		}
 	}
 }

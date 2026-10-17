@@ -19,7 +19,9 @@ func GetOptions(c *gin.Context) {
 	for k, v := range config.OptionMap {
 		// TurnstileSecretKey 是同一个策略下的漏网之鱼：它不以 Token/Secret 结尾，
 		// 但同样是机密（前端对该字段本来就是「留空=不修改」的用法，不会因为不返回而丢失配置）。
-		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") || k == "TurnstileSecretKey" {
+		// MidjourneyApiKey 同理（LTZY-API 新增，A4）：它是上游代理的调用凭据，也不以上述后缀结尾。
+		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") ||
+			k == "TurnstileSecretKey" || k == "MidjourneyApiKey" {
 			continue
 		}
 		options = append(options, &model.Option{

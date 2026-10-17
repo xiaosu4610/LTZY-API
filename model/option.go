@@ -80,6 +80,11 @@ func InitOptionMap() {
 	config.OptionMap["SensitiveWords"] = ""
 	// 命中动作：block（默认，直接拒绝）或 log（只记日志，用于上线前观察误伤率）
 	config.OptionMap["SensitiveWordsAction"] = "block"
+	// Midjourney 上游代理（LTZY-API 新增，A4）：不填则 MJ 接口明确报"未配置"
+	config.OptionMap["MidjourneyUpstreamURL"] = ""
+	config.OptionMap["MidjourneyApiKey"] = ""
+	// MJ 任务倍率：支持数字（1.5）或按动作区分（{"imagine":1.5,"upscale":0.5}）
+	config.OptionMap["MidjourneyModelRatio"] = ""
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
 	config.OptionMap["TieredRatio"] = ""
