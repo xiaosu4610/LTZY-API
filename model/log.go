@@ -213,6 +213,38 @@ func DeleteOldLog(targetTimestamp int64) (int64, error) {
 	return result.RowsAffected, result.Error
 }
 
+// ChannelStatistic 渠道维度的消费统计（LTZY-API 新增），用于渠道健康度看板。
+type ChannelStatistic struct {
+	ChannelId        int   `json:"channel_id" gorm:"column:channel_id"`
+	RequestCount     int64 `json:"request_count" gorm:"column:request_count"`
+	Quota            int64 `json:"quota" gorm:"column:quota"`
+	PromptTokens     int64 `json:"prompt_tokens" gorm:"column:prompt_tokens"`
+	CompletionTokens int64 `json:"completion_tokens" gorm:"column:completion_tokens"`
+	AvgElapsedTime   int64 `json:"avg_elapsed_time" gorm:"column:avg_elapsed_time"`
+}
+
+// GetChannelStatistics 按渠道聚合指定时间窗口内的消费日志。
+// startTimestamp / endTimestamp 为 0 时表示不限制该边界。
+func GetChannelStatistics(startTimestamp int64, endTimestamp int64) (stats []*ChannelStatistic, err error) {
+	ifnull := "ifnull"
+	if common.UsingPostgreSQL {
+		ifnull = "COALESCE"
+	}
+	tx := LOG_DB.Table("logs").
+		Select(fmt.Sprintf("channel_id, count(*) as request_count, %s(sum(quota),0) as quota, "+
+			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens, "+
+			"%s(avg(elapsed_time),0) as avg_elapsed_time", ifnull, ifnull, ifnull, ifnull)).
+		Where("type = ?", LogTypeConsume)
+	if startTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	err = tx.Group("channel_id").Scan(&stats).Error
+	return stats, err
+}
+
 type LogStatistic struct {
 	Day              string `gorm:"column:day"`
 	ModelName        string `gorm:"column:model_name"`
