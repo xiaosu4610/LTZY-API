@@ -38,6 +38,9 @@ type Token struct {
 	Rpm         int `json:"rpm" gorm:"default:0"`         // requests per minute
 	Tpm         int `json:"tpm" gorm:"default:0"`         // tokens per minute
 	Concurrency int `json:"concurrency" gorm:"default:0"` // 同时进行的请求数上限（C2）
+	// 预算上限（LTZY-API 新增，B6）：0 表示不限制，单位与 quota 一致
+	DailyQuotaLimit   int64 `json:"daily_quota_limit" gorm:"bigint;default:0"`
+	MonthlyQuotaLimit int64 `json:"monthly_quota_limit" gorm:"bigint;default:0"`
 }
 
 func GetAllUserTokens(userId int, startIdx int, num int, order string) ([]*Token, error) {
@@ -136,7 +139,7 @@ func (t *Token) Insert() error {
 // Update Make sure your token's fields is completed, because this will update non-zero values
 func (t *Token) Update() error {
 	var err error
-	err = DB.Model(t).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota", "models", "subnet", "rpm", "tpm", "concurrency").Updates(t).Error
+	err = DB.Model(t).Select("name", "status", "expired_time", "remain_quota", "unlimited_quota", "models", "subnet", "rpm", "tpm", "concurrency", "daily_quota_limit", "monthly_quota_limit").Updates(t).Error
 	return err
 }
 

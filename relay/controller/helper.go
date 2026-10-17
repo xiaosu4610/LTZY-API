@@ -161,6 +161,8 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
 	// 累计到运行指标，供 /metrics 抓取（LTZY-API 新增，D3）
 	metrics.RecordRelayQuota(meta.ChannelId, quota)
+	// 预算计数（LTZY-API 新增，B6）：累加用户与令牌的日/月用量
+	model.RecordBudgetUsage(meta.UserId, meta.TokenId, quota)
 	// 记录令牌本分钟 token 消耗（LTZY-API 新增，用于 TPM 统计/告警）
 	middleware.RecordTokenTPM(meta.TokenId, tokenTpm, totalTokens)
 }

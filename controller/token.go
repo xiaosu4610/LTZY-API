@@ -123,6 +123,9 @@ func validateToken(c *gin.Context, token model.Token) error {
 	if token.Concurrency < 0 {
 		return fmt.Errorf("并发上限不能为负数")
 	}
+	if token.DailyQuotaLimit < 0 || token.MonthlyQuotaLimit < 0 {
+		return fmt.Errorf("预算上限不能为负数")
+	}
 	return nil
 }
 
@@ -161,6 +164,9 @@ func AddToken(c *gin.Context) {
 		Rpm:         token.Rpm,
 		Tpm:         token.Tpm,
 		Concurrency: token.Concurrency,
+		// 预算上限（LTZY-API 新增，B6）
+		DailyQuotaLimit:   token.DailyQuotaLimit,
+		MonthlyQuotaLimit: token.MonthlyQuotaLimit,
 	}
 	err = cleanToken.Insert()
 	if err != nil {

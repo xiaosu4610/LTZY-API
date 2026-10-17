@@ -35,6 +35,8 @@ const EditToken = () => {
     rpm: 0,
     tpm: 0,
     concurrency: 0,
+    daily_quota_limit: 0,
+    monthly_quota_limit: 0,
   };
   const [inputs, setInputs] = useState(originInputs);
   const { name, remain_quota, expired_time, unlimited_quota } = inputs;
@@ -230,6 +232,30 @@ const EditToken = () => {
                   placeholder='例如 10'
                   onChange={handleInputChange}
                   value={inputs.concurrency}
+                  autoComplete='new-password'
+                  type='number'
+                  min='0'
+                />
+              </Form.Group>
+            </Form.Field>
+            <Form.Field>
+              <Form.Group widths='equal'>
+                <Form.Input
+                  label='每日预算上限（额度，0 表示不限）'
+                  name='daily_quota_limit'
+                  placeholder='例如 500000（约 1 美元）'
+                  onChange={handleInputChange}
+                  value={inputs.daily_quota_limit}
+                  autoComplete='new-password'
+                  type='number'
+                  min='0'
+                />
+                <Form.Input
+                  label='每月预算上限（额度，0 表示不限）'
+                  name='monthly_quota_limit'
+                  placeholder='例如 15000000（约 30 美元）'
+                  onChange={handleInputChange}
+                  value={inputs.monthly_quota_limit}
                   autoComplete='new-password'
                   type='number'
                   min='0'

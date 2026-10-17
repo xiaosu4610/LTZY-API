@@ -73,6 +73,9 @@ func InitOptionMap() {
 	config.OptionMap["GroupRatio"] = billingratio.GroupRatio2JSONString()
 	config.OptionMap["CompletionRatio"] = billingratio.CompletionRatio2JSONString()
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
+	// 全局用户级预算默认值（LTZY-API 新增，B6）：单位与 quota 一致，0 = 不限制
+	config.OptionMap["DefaultUserDailyQuotaLimit"] = "0"
+	config.OptionMap["DefaultUserMonthlyQuotaLimit"] = "0"
 	config.OptionMap["TopUpLink"] = config.TopUpLink
 	config.OptionMap["ChatLink"] = config.ChatLink
 	config.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(config.QuotaPerUnit, 'f', -1, 64)

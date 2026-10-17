@@ -224,6 +224,8 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 			channelId := c.GetInt(ctxkey.ChannelId)
 			model.UpdateChannelUsedQuota(channelId, quota)
+			// 预算计数（LTZY-API 新增，B6）
+			model.RecordBudgetUsage(meta.UserId, meta.TokenId, quota)
 		}
 	}(c.Request.Context())
 

@@ -188,6 +188,8 @@ func postConsumeRerankQuota(ctx context.Context, usage *relaymodel.Usage, meta *
 	})
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+	// 预算计数（LTZY-API 新增，B6）
+	model.RecordBudgetUsage(meta.UserId, meta.TokenId, quota)
 	// 记录令牌本分钟 token 消耗（LTZY-API 新增）
 	middleware.RecordTokenTPM(meta.TokenId, tokenTpm, usage.PromptTokens)
 }

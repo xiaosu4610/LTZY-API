@@ -160,6 +160,9 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&AuditLog{}); err != nil {
 		return err
 	}
+	if err = DB.AutoMigrate(&QuotaBudget{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}

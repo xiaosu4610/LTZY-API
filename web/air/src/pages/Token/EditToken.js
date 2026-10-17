@@ -293,6 +293,28 @@ const EditToken = (props) => {
             onChange={(value) => handleInputChange('concurrency', value || 0)}
             value={inputs.concurrency || 0}
           />
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>每日预算上限（额度，0 表示不限）</Typography.Text>
+          </div>
+          <InputNumber
+            style={{ marginTop: 8, width: '100%' }}
+            name="daily_quota_limit"
+            placeholder={'例如 500000（约 1 美元）'}
+            min={0}
+            onChange={(value) => handleInputChange('daily_quota_limit', value || 0)}
+            value={inputs.daily_quota_limit || 0}
+          />
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>每月预算上限（额度，0 表示不限）</Typography.Text>
+          </div>
+          <InputNumber
+            style={{ marginTop: 8, width: '100%' }}
+            name="monthly_quota_limit"
+            placeholder={'例如 15000000（约 30 美元）'}
+            min={0}
+            onChange={(value) => handleInputChange('monthly_quota_limit', value || 0)}
+            value={inputs.monthly_quota_limit || 0}
+          />
 
           <Divider />
           <Banner type={'warning'}
