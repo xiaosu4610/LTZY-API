@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+/* LTZY-API 设计令牌：暗色为默认，亮色通过 .light 覆盖 */
+@theme {
+  --color-bg: #0a0c12;
+  --color-surface: #10131c;
+  --color-surface-2: #161a26;
+  --color-border: #232838;
+  --color-fg: #e8ebf3;
+  --color-muted: #8b93a7;
+  --color-primary: #5b8cff;
+  --color-primary-fg: #ffffff;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --radius-card: 14px;
+  --font-sans: 'Public Sans', -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+:root {
+  color-scheme: dark;
+  --ltzy-bg: #0a0c12;
+  --ltzy-surface: #10131c;
+  --ltzy-surface-2: #161a26;
+  --ltzy-border: #232838;
+  --ltzy-fg: #e8ebf3;
+  --ltzy-muted: #8b93a7;
+  --ltzy-primary: #5b8cff;
+  --ltzy-primary-fg: #ffffff;
+  --ltzy-success: #34d399;
+  --ltzy-warning: #fbbf24;
+  --ltzy-danger: #f87171;
+  --ltzy-glow: radial-gradient(
+    1200px 600px at 15% -10%,
+    rgba(91, 140, 255, 0.18),
+    transparent 60%
+  );
+}
+
+.light {
+  color-scheme: light;
+  --ltzy-bg: #f6f7fb;
+  --ltzy-surface: #ffffff;
+  --ltzy-surface-2: #f1f3f9;
+  --ltzy-border: #e2e6ef;
+  --ltzy-fg: #131826;
+  --ltzy-muted: #667085;
+  --ltzy-primary: #3b6df0;
+  --ltzy-primary-fg: #ffffff;
+  --ltzy-success: #059669;
+  --ltzy-warning: #d97706;
+  --ltzy-danger: #dc2626;
+  --ltzy-glow: radial-gradient(
+    1200px 600px at 15% -10%,
+    rgba(59, 109, 240, 0.1),
+    transparent 60%
+  );
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--ltzy-bg);
+  background-image: var(--ltzy-glow);
+  background-repeat: no-repeat;
+  color: var(--ltzy-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+* {
+  border-color: var(--ltzy-border);
+}
+
+/* 细滚动条，贴近终端工具的观感 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ltzy-border);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ltzy-muted);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes ltzy-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ltzy-enter {
+  animation: ltzy-fade-up 0.28s ease both;
+}

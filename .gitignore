@@ -5,13 +5,14 @@ upload
 *.db
 *.db-journal
 build
+!web/build
+!web/build/default
+!web/build/default/**
 logs
 data
 /node_modules
 /web/node_modules
-/web/default/node_modules
-/web/berry/node_modules
-/web/air/node_modules
+/web/.vite
 cmd.md
 .env
 /one-api
