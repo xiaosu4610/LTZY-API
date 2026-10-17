@@ -95,6 +95,32 @@ func UpdateAbilityStatus(channelId int, status bool) error {
 	return DB.Model(&Ability{}).Where("channel_id = ?", channelId).Select("enabled").Update("enabled", status).Error
 }
 
+// AbilityExists 判断「分组 + 模型 + 渠道」这条能力记录是否存在且处于启用状态。
+//
+// 灰度路由（E10）需要知道「某个指定渠道能不能承载当前请求的模型」，
+// 否则会把请求打到不支持该模型的上游上直接报错。内存缓存未开启时选渠道路径
+// 也是查 Ability 表，这里保持同一口径，避免灰度与主路径判断不一致。
+// 查询出错一律按「不支持」返回：宁可放弃灰度，也不能因此让请求失败。
+func AbilityExists(group string, model string, channelId int) bool {
+	if DB == nil {
+		return false
+	}
+	groupCol := "`group`"
+	trueVal := "1"
+	if common.UsingPostgreSQL {
+		groupCol = `"group"`
+		trueVal = "true"
+	}
+	var count int64
+	err := DB.Model(&Ability{}).
+		Where(groupCol+" = ? and model = ? and channel_id = ? and enabled = "+trueVal, group, model, channelId).
+		Count(&count).Error
+	if err != nil {
+		return false
+	}
+	return count > 0
+}
+
 func GetGroupModels(ctx context.Context, group string) ([]string, error) {
 	groupCol := "`group`"
 	trueVal := "1"

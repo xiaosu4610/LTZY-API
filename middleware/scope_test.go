@@ -25,7 +25,9 @@ func newScopeTestRouter(allowedModes string, setCtx bool) *gin.Engine {
 	router.POST("/v1/chat/completions", func(c *gin.Context) { c.String(http.StatusOK, "chat-ok") })
 	router.POST("/v1/embeddings", func(c *gin.Context) { c.String(http.StatusOK, "embedding-ok") })
 	router.POST("/v1/images/generations", func(c *gin.Context) { c.String(http.StatusOK, "image-ok") })
-	router.POST("/v1/files", func(c *gin.Context) { c.String(http.StatusOK, "placeholder-ok") })
+	router.POST("/v1/files", func(c *gin.Context) { c.String(http.StatusOK, "file-ok") })
+	// 一个刻意未登记为中继模式的路径，用于验证 scope 不会把「未知」误判成「无权限」
+	router.POST("/v1/not-a-relay-mode", func(c *gin.Context) { c.String(http.StatusOK, "passthrough-ok") })
 	return router
 }
 
@@ -87,12 +89,30 @@ func TestTokenScopeAllowsConfigured(t *testing.T) {
 	}
 }
 
-// TestTokenScopeUnknownPathNotBlocked 未知路径不应被 scope 拦成 403
-// （例如 /v1/files 由占位处理器返回 501，不能被误报为无权限）
+// TestTokenScopeUnknownPathNotBlocked 没有对应中继模式的路径不应被 scope 拦成 403
+// （例如未接入的端点，应交由后续处理器决定，不能被误报为无权限）
 func TestTokenScopeUnknownPathNotBlocked(t *testing.T) {
 	router := newScopeTestRouter("chat", true)
-	if rec := doScopeRequest(router, "/v1/files"); rec.Code != http.StatusOK {
+	req := httptest.NewRequest(http.MethodPost, "/v1/not-a-relay-mode", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
 		t.Fatalf("未知模式路径应交由后续处理器，实际 %d", rec.Code)
+	}
+}
+
+// TestTokenScopeCoversFilesMode 回归：/v1/files 已登记为中继模式（A6 补齐 501 端点后），
+// 因此只允许 chat 的令牌访问它时必须被拒 —— 否则 scope 就成了摆设。
+// （该用例源自一次真实回归：新增 relaymode 后，早期"把它当未知路径放行"的断言失效了。）
+func TestTokenScopeCoversFilesMode(t *testing.T) {
+	router := newScopeTestRouter("chat", true)
+	if rec := doScopeRequest(router, "/v1/files"); rec.Code != http.StatusForbidden {
+		t.Fatalf("/v1/files 已是中继模式，未授权令牌应 403，实际 %d", rec.Code)
+	}
+	// 显式放开 files 后应放行
+	router2 := newScopeTestRouter("chat,files", true)
+	if rec := doScopeRequest(router2, "/v1/files"); rec.Code != http.StatusOK {
+		t.Fatalf("已放开 files 应放行，实际 %d", rec.Code)
 	}
 }
 

@@ -252,6 +252,29 @@ func InvalidateChannelCache() {
 	}
 }
 
+// ChannelSupportsModel 判断「分组下的某个渠道能否承载该模型」。
+//
+// 灰度路由（E10）靠它做准入校验：灰度渠道往往是要试跑的新上游，models 字段
+// 未必包含当前请求的模型，若不做这层校验，命中灰度的请求会直接打到不支持该
+// 模型的上游上失败。
+//
+// 内存缓存开启时直接复用 group2model2channels：这份索引本来就是按「分组 + 模型」
+// 聚合启用中的渠道，与主选渠道路径共用同一份数据，既不需要额外查询，也不会与
+// 主路径产生判断分歧；缓存未开启时退化为查 Ability 表（与主路径同样的兜底口径）。
+func ChannelSupportsModel(group string, model string, channelId int) bool {
+	if !config.MemoryCacheEnabled {
+		return AbilityExists(group, model, channelId)
+	}
+	channelSyncLock.RLock()
+	defer channelSyncLock.RUnlock()
+	for _, channel := range group2model2channels[group][model] {
+		if channel.Id == channelId {
+			return true
+		}
+	}
+	return false
+}
+
 func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
 	if !config.MemoryCacheEnabled {
 		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority)

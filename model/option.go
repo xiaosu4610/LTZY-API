@@ -88,6 +88,12 @@ func InitOptionMap() {
 	// 角色权限表（LTZY-API 新增，C4）：JSON 如 {"admin":["channel.read"],"20":["log.read"]}
 	// 留空 = 使用与改造前完全一致的内置默认值
 	config.OptionMap["RolePermissions"] = ""
+	// 灰度路由（LTZY-API 新增，E10）：把一部分流量导向指定渠道，用于新上游试跑与渐进放量。
+	// 灰度渠道必须已加入目标分组的渠道列表且 Models 含该模型，否则能力索引查不到、灰度不生效。
+	config.OptionMap["CanaryEnabled"] = "false"
+	config.OptionMap["CanaryChannelId"] = "0"
+	config.OptionMap["CanaryPercent"] = "0"
+	config.OptionMap["CanaryGroups"] = ""
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
 	config.OptionMap["TieredRatio"] = ""
