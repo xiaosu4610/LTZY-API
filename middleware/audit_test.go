@@ -51,6 +51,14 @@ func TestMaskSensitiveFields(t *testing.T) {
 			wantHas: []string{`"access_token":"***"`},
 			wantNot: []string{"tok-123456"},
 		},
+		{
+			// 渠道的 config 是「JSON 字符串套 JSON」，内含 sk 与 Vertex 服务账号私钥。
+			// 早期只按字段名打码的实现会让这串凭据原样落库（E5 发现的泄露点）。
+			name:    "JSON 字符串套 JSON 也要递归打码",
+			body:    `{"name":"c1","config":"{\"region\":\"us\",\"sk\":\"vertex-secret-key\",\"vertex_ai_adc\":\"-----BEGIN PRIVATE KEY-----\"}"}`,
+			wantHas: []string{"c1", "us"},
+			wantNot: []string{"vertex-secret-key", "BEGIN PRIVATE KEY"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

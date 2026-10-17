@@ -140,48 +140,10 @@ func extractIdFromBody(body []byte) string {
 
 // maskSensitiveFields 把 JSON 顶层与嵌套对象里的敏感字段值打码为 ***。
 // 解析失败（如 multipart、非 JSON）时丢弃明细，只保留动作与对象。
+//
+// 复用 common.MaskJSONBody：它会递归解析「JSON 字符串套 JSON」——
+// 渠道的 config 字段正是这种形态（内含 sk 与 vertex_ai_adc 服务账号私钥），
+// 早期只按字段名打码的实现会把整串原样写进审计表（落库长期留存）。
 func maskSensitiveFields(body string) string {
-	var parsed any
-	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
-		return ""
-	}
-	out, err := json.Marshal(maskValue(parsed))
-	if err != nil {
-		return ""
-	}
-	return string(out)
-}
-
-// sensitiveKeys 需要打码的字段名（小写比较）。
-var sensitiveKeys = map[string]bool{
-	"key":          true,
-	"secret":       true,
-	"password":     true,
-	"access_token": true,
-	"api_key":      true,
-	"session":      true,
-	"sk":           true,
-}
-
-func maskValue(v any) any {
-	switch val := v.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(val))
-		for k, vv := range val {
-			if sensitiveKeys[strings.ToLower(k)] {
-				out[k] = "***"
-				continue
-			}
-			out[k] = maskValue(vv)
-		}
-		return out
-	case []any:
-		out := make([]any, len(val))
-		for i, vv := range val {
-			out[i] = maskValue(vv)
-		}
-		return out
-	default:
-		return v
-	}
+	return common.MaskJSONBody([]byte(body))
 }
