@@ -58,7 +58,8 @@ func RelayRerankHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	modelRatio := billingratio.GetModelRatio(rerankRequest.Model, meta.ChannelType)
 	// 分组×模型 二维定价（LTZY-API 新增，B3）
 	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, rerankRequest.Model)
-	ratio := modelRatio * groupRatio
+	// 用量阶梯倍率（LTZY-API 新增，B4）
+	ratio := modelRatio * groupRatio * tieredRatio(rerankRequest.Model, meta.UserId)
 
 	// token 统计：query + 所有 documents
 	promptTokens := openai.CountTokenInput(rerankRequest.RerankAllText(), rerankRequest.Model)

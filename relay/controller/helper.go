@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/relay/constant/role"
@@ -67,6 +68,25 @@ func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTok
 	return int64(float64(preConsumedTokens) * ratio)
 }
 
+// tieredRatio 取「用量阶梯」倍率（LTZY-API 新增，B4）。
+//
+// 依据「用户本月累计已消费额度」确定档位。未配置阶梯时直接返回 1.0 —— 这里做了
+// 零开销短路：只有真正配置了阶梯才去查用量，避免给未启用该功能的部署增加查询。
+//
+// 取不到用量（数据库抖动等）时按 1.0 处理：宁可少打折，也不因计费辅助信息缺失
+// 而拒绝或错误计费。
+func tieredRatio(modelName string, userId int) float64 {
+	if !billingratio.HasTieredRatio() {
+		return 1.0
+	}
+	_, monthlyUsed, err := model.GetBudgetUsages(model.BudgetSubjectUser, userId, time.Now())
+	if err != nil {
+		logger.SysError("failed to read usage for tiered pricing: " + err.Error())
+		return 1.0
+	}
+	return billingratio.GetTieredRatio(modelName, monthlyUsed)
+}
+
 func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, ratio float64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {
 	preConsumedQuota := getPreConsumedQuota(textRequest, promptTokens, ratio)
 
@@ -98,7 +118,9 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 
 // postConsumeQuota 结算本次请求额度。
 // tokenTpm 为本令牌的每分钟 token 上限（0 表示不限制），用于 TPM 统计（LTZY-API 新增）。
-func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool, tokenTpm int) {
+// tiered 为本次请求的用量阶梯倍率（B4），必须与预扣阶段使用同一个值：
+// 结算若重新查一次用量，并发请求会导致预扣与结算不一致。
+func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool, tokenTpm int, tiered float64) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
@@ -114,7 +136,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	if usage.CompletionTokensDetails != nil {
 		reasoningTokens = usage.CompletionTokensDetails.ReasoningTokens
 	}
-	pricingModel := billing.NewTextPricingModel(textRequest.Model, modelRatio, completionRatio)
+	pricingModel := billing.NewTextPricingModel(textRequest.Model, modelRatio, completionRatio, tiered)
 	quota = pricingModel.CalcQuota(billing.UsageInput{
 		PromptTokens:     promptTokens,
 		CompletionTokens: completionTokens,
@@ -140,6 +162,10 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		logger.Error(ctx, "error update user quota cache: "+err.Error())
 	}
 	logContent := fmt.Sprintf("倍率：%.2f × %.2f × %.2f", modelRatio, groupRatio, completionRatio)
+	// 阶梯定价生效时在日志中体现，便于账单侧核对（LTZY-API 新增，B4）
+	if tiered != 0 && tiered != 1.0 {
+		logContent += fmt.Sprintf("（用量阶梯倍率 %.2f）", tiered)
+	}
 	// 推理 token 有独立倍率时在日志中体现，便于账单侧核对（LTZY-API 新增）
 	if reasoningTokens > 0 && pricingModel.ReasoningRatio != completionRatio {
 		logContent += fmt.Sprintf("（推理 token %d，倍率 %.2f）", reasoningTokens, pricingModel.ReasoningRatio)

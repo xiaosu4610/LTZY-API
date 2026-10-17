@@ -139,6 +139,30 @@ func setReasoningRatioOption(t *testing.T, value string) {
 	config.OptionMapRWMutex.Unlock()
 }
 
+// TestCalcQuotaAppliesTieredRatio 阶梯倍率必须真正参与结算计算（B4 回归测试）。
+//
+// 曾经的真实缺陷：阶梯倍率只乘进了「预扣用的 ratio」，而结算走
+// modelRatio × groupRatio 重算，导致阶梯折扣预扣打了折、结算却按原价扣，
+// 用户实际未享受折扣。单测只测倍率函数本身是发现不了的，必须锁在这里。
+func TestCalcQuotaAppliesTieredRatio(t *testing.T) {
+	usage := UsageInput{PromptTokens: 1000, CompletionTokens: 500}
+	base := PricingModel{Mode: PricingModeToken, ModelRatio: 2, CompletionRatio: 4, PromptRatio: 1}
+
+	full := base.CalcQuota(usage, 1) // (1000 + 500*4) * 2 = 6000
+	if full != 6000 {
+		t.Fatalf("无阶梯时应为 6000，实际 %d", full)
+	}
+	base.TieredRatio = 0.5
+	if got := base.CalcQuota(usage, 1); got != 3000 {
+		t.Fatalf("阶梯倍率 0.5 未生效，实际 %d，期望 3000", got)
+	}
+	// TieredRatio 为 0（未配置）必须等价于 1.0，保证与旧公式一致
+	base.TieredRatio = 0
+	if got := base.CalcQuota(usage, 1); got != full {
+		t.Fatalf("TieredRatio=0 应等价于 1.0，实际 %d，期望 %d", got, full)
+	}
+}
+
 // TestCalcQuotaEquivalentToLegacy 锁死统一定价引擎与旧计费公式的等价性（B1 接入的安全网）。
 // 旧公式（helper.go 改造前）：ceil((prompt + completion*completionRatio) * modelRatio * groupRatio)，
 // 倍率非零但结果非正时兜底为 1。ReasoningRatio 未配置（=补全倍率）时两者必须逐分不差。
@@ -192,12 +216,12 @@ func TestNewTextPricingModelFallback(t *testing.T) {
 	setReasoningRatioOption(t, "")
 	defer setReasoningRatioOption(t, "")
 
-	m := NewTextPricingModel("o1", 2, 4)
+	m := NewTextPricingModel("o1", 2, 4, 0)
 	if m.ReasoningRatio != 4 {
 		t.Fatalf("未配置时应回退补全倍率，got %f", m.ReasoningRatio)
 	}
 	setReasoningRatioOption(t, `{"o1":8}`)
-	m = NewTextPricingModel("o1", 2, 4)
+	m = NewTextPricingModel("o1", 2, 4, 0)
 	if m.ReasoningRatio != 8 {
 		t.Fatalf("配置后应生效，got %f", m.ReasoningRatio)
 	}

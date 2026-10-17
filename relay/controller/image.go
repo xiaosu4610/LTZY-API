@@ -171,7 +171,8 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	modelRatio := billingratio.GetModelRatio(imageModel, meta.ChannelType)
 	// 分组×模型 二维定价（LTZY-API 新增，B3）
 	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, imageModel)
-	ratio := modelRatio * groupRatio
+	// 用量阶梯倍率（LTZY-API 新增，B4）
+	ratio := modelRatio * groupRatio * tieredRatio(imageModel, meta.UserId)
 	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
 
 	var quota int64

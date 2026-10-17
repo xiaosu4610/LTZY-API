@@ -27,6 +27,7 @@ type PricingModel struct {
 	CompletionRatio float64     // 补全倍率
 	PromptRatio     float64     // 输入倍率，默认 1.0
 	ReasoningRatio  float64     // 推理 token 倍率
+	TieredRatio     float64     // 用量阶梯倍率（B4），0 或 1 表示无阶梯
 	PerUnitQuota    float64     // 按次/按秒/按字符的单价
 }
 
@@ -66,13 +67,18 @@ func (m PricingModel) CalcQuota(input UsageInput, groupRatio float64) int64 {
 			// reasoning 倍率未配置时回退到补全倍率
 			reasoningRatio = completionRatio
 		}
+		// 用量阶梯倍率（B4）：未配置（0）时按 1.0 处理，保持与旧公式等价
+		tieredRatio := m.TieredRatio
+		if tieredRatio == 0 {
+			tieredRatio = 1.0
+		}
 		// 推理 token 包含在 completion token 中，按 reasoningRatio 替换其 completionRatio 部分
 		completionPart := float64(input.CompletionTokens)*completionRatio +
 			float64(input.ReasoningTokens)*(reasoningRatio-completionRatio)
 		if completionPart < 0 {
 			completionPart = 0
 		}
-		quota = (float64(input.PromptTokens)*promptRatio + completionPart) * m.ModelRatio * groupRatio
+		quota = (float64(input.PromptTokens)*promptRatio + completionPart) * m.ModelRatio * groupRatio * tieredRatio
 		if math.IsNaN(quota) || math.IsInf(quota, 0) || quota <= 0 {
 			return 0
 		}
@@ -104,9 +110,11 @@ func GetPricingModel(modelName string, channelType int) PricingModel {
 
 // NewTextPricingModel 用已算好的倍率构建 token 计费模型。
 // 结算路径复用调用方算出的 modelRatio / completionRatio，避免二次查表；
-// 若模型倍率因渠道差异（GetModelRatio 支持按渠道后缀取价）与调用方不一致，以调用方为准。
-func NewTextPricingModel(modelName string, modelRatio float64, completionRatio float64) PricingModel {
-	return newTextPricingModel(modelName, modelRatio, completionRatio)
+// tieredRatio 为用量阶梯倍率（B4），必须与预扣时使用同一个值，否则预扣与结算会打架。
+func NewTextPricingModel(modelName string, modelRatio float64, completionRatio float64, tieredRatio float64) PricingModel {
+	model := newTextPricingModel(modelName, modelRatio, completionRatio)
+	model.TieredRatio = tieredRatio
+	return model
 }
 
 // newTextPricingModel 统一构建入口。

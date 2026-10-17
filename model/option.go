@@ -75,6 +75,8 @@ func InitOptionMap() {
 	// 分组×模型 二维定价矩阵（LTZY-API 新增，B3）：JSON 如 {"vip":{"gpt-4o":0.8}}
 	config.OptionMap["ModelGroupRatio"] = billingratio.ModelGroupRatio2JSONString()
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
+	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
+	config.OptionMap["TieredRatio"] = ""
 	// 全局用户级预算默认值（LTZY-API 新增，B6）：单位与 quota 一致，0 = 不限制
 	config.OptionMap["DefaultUserDailyQuotaLimit"] = "0"
 	config.OptionMap["DefaultUserMonthlyQuotaLimit"] = "0"
@@ -245,6 +247,11 @@ func updateOptionMap(key string, value string) (err error) {
 		// 校验函数放在 ratio 包：billing 包引用了 model，从 model 引 billing 会成环。
 		if validationErr := billingratio.ValidateReasoningRatioOption(value); validationErr != nil {
 			err = errors.Join(errors.New("ReasoningRatio 格式错误"), validationErr)
+		}
+	case "TieredRatio":
+		// 用量阶梯定价（LTZY-API 新增，B4）：拦截非法 JSON、负阈值/负倍率与重复阈值
+		if validationErr := billingratio.ValidateTieredRatioOption(value); validationErr != nil {
+			err = errors.Join(errors.New("TieredRatio 配置错误"), validationErr)
 		}
 	case "TopUpLink":
 		config.TopUpLink = value

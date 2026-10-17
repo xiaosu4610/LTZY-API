@@ -44,7 +44,10 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
 	// 分组×模型 二维定价（LTZY-API 新增，B3）：未配置矩阵时等价于原 GetGroupRatio
 	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, textRequest.Model)
-	ratio := modelRatio * groupRatio
+	// 用量阶梯倍率（LTZY-API 新增，B4）：未配置阶梯时为 1.0。
+	// 只算一次并透传给结算，保证预扣与结算用的是同一档位（并发请求下重算会不一致）。
+	tiered := tieredRatio(textRequest.Model, meta.UserId)
+	ratio := modelRatio * groupRatio * tiered
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
 	meta.PromptTokens = promptTokens
@@ -85,7 +88,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return respErr
 	}
 	// post-consume quota
-	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset, c.GetInt(ctxkey.TokenTpm))
+	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset, c.GetInt(ctxkey.TokenTpm), tiered)
 	return nil
 }
 
