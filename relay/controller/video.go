@@ -53,7 +53,8 @@ func RelayVideoHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 
 	// 计费
 	modelRatio := billingratio.GetModelRatio(videoRequest.Model, meta.ChannelType)
-	groupRatio := billingratio.GetGroupRatio(meta.Group)
+	// 分组×模型 二维定价（LTZY-API 新增，B3）
+	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, videoRequest.Model)
 	ratio := modelRatio * groupRatio
 	quota := int64(ratio * videoQuotaUnit * float64(videoRequest.N))
 

@@ -72,6 +72,8 @@ func InitOptionMap() {
 	config.OptionMap["ModelRatio"] = billingratio.ModelRatio2JSONString()
 	config.OptionMap["GroupRatio"] = billingratio.GroupRatio2JSONString()
 	config.OptionMap["CompletionRatio"] = billingratio.CompletionRatio2JSONString()
+	// 分组×模型 二维定价矩阵（LTZY-API 新增，B3）：JSON 如 {"vip":{"gpt-4o":0.8}}
+	config.OptionMap["ModelGroupRatio"] = billingratio.ModelGroupRatio2JSONString()
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 全局用户级预算默认值（LTZY-API 新增，B6）：单位与 quota 一致，0 = 不限制
 	config.OptionMap["DefaultUserDailyQuotaLimit"] = "0"
@@ -233,6 +235,9 @@ func updateOptionMap(key string, value string) (err error) {
 		err = billingratio.UpdateModelRatioByJSONString(value)
 	case "GroupRatio":
 		err = billingratio.UpdateGroupRatioByJSONString(value)
+	case "ModelGroupRatio":
+		// 分组×模型 二维定价矩阵：解析失败或含负值时保留原矩阵，避免配置写错导致计费失控
+		err = billingratio.UpdateModelGroupRatioByJSONString(value)
 	case "CompletionRatio":
 		err = billingratio.UpdateCompletionRatioByJSONString(value)
 	case "ReasoningRatio":

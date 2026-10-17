@@ -56,7 +56,8 @@ func RelayRerankHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 
 	// 倍率
 	modelRatio := billingratio.GetModelRatio(rerankRequest.Model, meta.ChannelType)
-	groupRatio := billingratio.GetGroupRatio(meta.Group)
+	// 分组×模型 二维定价（LTZY-API 新增，B3）
+	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, rerankRequest.Model)
 	ratio := modelRatio * groupRatio
 
 	// token 统计：query + 所有 documents

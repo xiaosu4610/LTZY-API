@@ -42,7 +42,8 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.ForcedSystemPrompt)
 	// get model ratio & group ratio
 	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
-	groupRatio := billingratio.GetGroupRatio(meta.Group)
+	// 分组×模型 二维定价（LTZY-API 新增，B3）：未配置矩阵时等价于原 GetGroupRatio
+	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, textRequest.Model)
 	ratio := modelRatio * groupRatio
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)

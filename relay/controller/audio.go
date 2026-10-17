@@ -55,7 +55,8 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	modelRatio := billingratio.GetModelRatio(audioModel, channelType)
-	groupRatio := billingratio.GetGroupRatio(group)
+	// 分组×模型 二维定价（LTZY-API 新增，B3）
+	groupRatio := billingratio.GetGroupRatioForModel(group, audioModel)
 	ratio := modelRatio * groupRatio
 	var quota int64
 	var preConsumedQuota int64
