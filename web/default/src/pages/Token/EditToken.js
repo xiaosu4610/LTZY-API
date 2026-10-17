@@ -20,28 +20,34 @@ import { renderQuotaWithPrompt } from '../../helpers/render';
 
 // 可选的中继模式（与后端 relay/relaymode/name.go 的取值一一对应，C3）
 // 后端校验会拒绝非法值，这里只做展示，避免前后端两处维护两套校验逻辑
+//
+// i18n 说明：表项里只存 labelKey（词条键）与 endpoint（接口路径），
+// 显示文案在组件内拼接。原因是 endpoint 属于机器可读的协议常量，任何语言下都不该翻译，
+// 把它和中文字面量混在一个 text 里会导致英文界面也必须显示中文模式名。
 const ALLOWED_MODE_OPTIONS = [
-  { key: 'chat', text: '对话 /v1/chat/completions', value: 'chat' },
-  { key: 'completions', text: '文本补全 /v1/completions', value: 'completions' },
-  { key: 'embeddings', text: '向量嵌入 /v1/embeddings', value: 'embeddings' },
-  { key: 'moderations', text: '内容审核 /v1/moderations', value: 'moderations' },
-  { key: 'images', text: '图像生成 /v1/images/generations', value: 'images' },
-  { key: 'edits', text: '图像编辑 /v1/edits', value: 'edits' },
-  { key: 'audio_speech', text: '语音合成 /v1/audio/speech', value: 'audio_speech' },
+  { key: 'chat', labelKey: 'token.edit.modes.chat', endpoint: '/v1/chat/completions', value: 'chat' },
+  { key: 'completions', labelKey: 'token.edit.modes.completions', endpoint: '/v1/completions', value: 'completions' },
+  { key: 'embeddings', labelKey: 'token.edit.modes.embeddings', endpoint: '/v1/embeddings', value: 'embeddings' },
+  { key: 'moderations', labelKey: 'token.edit.modes.moderations', endpoint: '/v1/moderations', value: 'moderations' },
+  { key: 'images', labelKey: 'token.edit.modes.images', endpoint: '/v1/images/generations', value: 'images' },
+  { key: 'edits', labelKey: 'token.edit.modes.edits', endpoint: '/v1/edits', value: 'edits' },
+  { key: 'audio_speech', labelKey: 'token.edit.modes.audio_speech', endpoint: '/v1/audio/speech', value: 'audio_speech' },
   {
     key: 'audio_transcription',
-    text: '语音识别 /v1/audio/transcriptions',
+    labelKey: 'token.edit.modes.audio_transcription',
+    endpoint: '/v1/audio/transcriptions',
     value: 'audio_transcription',
   },
   {
     key: 'audio_translation',
-    text: '语音翻译 /v1/audio/translations',
+    labelKey: 'token.edit.modes.audio_translation',
+    endpoint: '/v1/audio/translations',
     value: 'audio_translation',
   },
-  { key: 'rerank', text: '重排 /v1/rerank', value: 'rerank' },
-  { key: 'responses', text: 'Responses /v1/responses', value: 'responses' },
-  { key: 'videos', text: '视频生成 /v1/videos', value: 'videos' },
-  { key: 'proxy', text: '通用代理 /v1/oneapi/proxy', value: 'proxy' },
+  { key: 'rerank', labelKey: 'token.edit.modes.rerank', endpoint: '/v1/rerank', value: 'rerank' },
+  { key: 'responses', labelKey: 'token.edit.modes.responses', endpoint: '/v1/responses', value: 'responses' },
+  { key: 'videos', labelKey: 'token.edit.modes.videos', endpoint: '/v1/videos', value: 'videos' },
+  { key: 'proxy', labelKey: 'token.edit.modes.proxy', endpoint: '/v1/oneapi/proxy', value: 'proxy' },
 ];
 
 const EditToken = () => {
@@ -114,10 +120,10 @@ const EditToken = () => {
         }
         setInputs(data);
       } else {
-        showError(message || 'Failed to load token');
+        showError(message || t('token.edit.messages.load_failed'));
       }
     } catch (error) {
-      showError(error.message || 'Network error');
+      showError(error.message || t('messages.error.network'));
     }
     setLoading(false);
   };
@@ -136,22 +142,22 @@ const EditToken = () => {
         });
         setModelOptions(options);
       } else {
-        showError(message || 'Failed to load models');
+        showError(message || t('token.edit.messages.models_load_failed'));
       }
     } catch (error) {
-      showError(error.message || 'Network error');
+      showError(error.message || t('messages.error.network'));
     }
   };
 
   useEffect(() => {
     if (isEdit) {
       loadToken().catch((error) => {
-        showError(error.message || 'Failed to load token');
+        showError(error.message || t('token.edit.messages.load_failed'));
         setLoading(false);
       });
     }
     loadAvailableModels().catch((error) => {
-      showError(error.message || 'Failed to load models');
+      showError(error.message || t('token.edit.messages.models_load_failed'));
     });
   }, []);
 
@@ -231,8 +237,8 @@ const EditToken = () => {
             </Form.Field>
             <Form.Field>
               <Form.Dropdown
-                label='可调用的接口范围（不选表示不限制）'
-                placeholder='不选则允许全部接口'
+                label={t('token.edit.allowed_modes')}
+                placeholder={t('token.edit.allowed_modes_placeholder')}
                 name='allowed_modes'
                 fluid
                 multiple
@@ -240,7 +246,12 @@ const EditToken = () => {
                 onChange={handleInputChange}
                 value={inputs.allowed_modes}
                 autoComplete='new-password'
-                options={ALLOWED_MODE_OPTIONS}
+                options={ALLOWED_MODE_OPTIONS.map((option) => ({
+                  key: option.key,
+                  value: option.value,
+                  // 模式名走词条，接口路径原样保留（协议常量，不翻译）
+                  text: `${t(option.labelKey)} ${option.endpoint}`,
+                }))}
               />
             </Form.Field>
             <Form.Field>
@@ -256,9 +267,9 @@ const EditToken = () => {
             <Form.Field>
               <Form.Group widths='equal'>
                 <Form.Input
-                  label='每分钟请求数上限（RPM，0 表示不限）'
+                  label={t('token.edit.rpm')}
                   name='rpm'
-                  placeholder='例如 60'
+                  placeholder={t('token.edit.rpm_placeholder')}
                   onChange={handleInputChange}
                   value={inputs.rpm}
                   autoComplete='new-password'
@@ -266,9 +277,9 @@ const EditToken = () => {
                   min='0'
                 />
                 <Form.Input
-                  label='每分钟 Token 上限（TPM，0 表示不限）'
+                  label={t('token.edit.tpm')}
                   name='tpm'
-                  placeholder='例如 100000'
+                  placeholder={t('token.edit.tpm_placeholder')}
                   onChange={handleInputChange}
                   value={inputs.tpm}
                   autoComplete='new-password'
@@ -276,9 +287,9 @@ const EditToken = () => {
                   min='0'
                 />
                 <Form.Input
-                  label='并发请求数上限（0 表示不限）'
+                  label={t('token.edit.concurrency')}
                   name='concurrency'
-                  placeholder='例如 10'
+                  placeholder={t('token.edit.concurrency_placeholder')}
                   onChange={handleInputChange}
                   value={inputs.concurrency}
                   autoComplete='new-password'
@@ -290,9 +301,9 @@ const EditToken = () => {
             <Form.Field>
               <Form.Group widths='equal'>
                 <Form.Input
-                  label='每日预算上限（额度，0 表示不限）'
+                  label={t('token.edit.daily_quota_limit')}
                   name='daily_quota_limit'
-                  placeholder='例如 500000（约 1 美元）'
+                  placeholder={t('token.edit.daily_quota_limit_placeholder')}
                   onChange={handleInputChange}
                   value={inputs.daily_quota_limit}
                   autoComplete='new-password'
@@ -300,9 +311,9 @@ const EditToken = () => {
                   min='0'
                 />
                 <Form.Input
-                  label='每月预算上限（额度，0 表示不限）'
+                  label={t('token.edit.monthly_quota_limit')}
                   name='monthly_quota_limit'
-                  placeholder='例如 15000000（约 30 美元）'
+                  placeholder={t('token.edit.monthly_quota_limit_placeholder')}
                   onChange={handleInputChange}
                   value={inputs.monthly_quota_limit}
                   autoComplete='new-password'

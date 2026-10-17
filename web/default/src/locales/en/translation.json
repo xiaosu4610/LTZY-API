@@ -196,6 +196,33 @@
       "name_placeholder": "Please enter name",
       "models": "Model Scope",
       "models_placeholder": "Please select allowed models, leave empty for no restrictions",
+      "allowed_modes": "Allowed API Scope (leave empty for no restriction)",
+      "allowed_modes_placeholder": "Leave empty to allow all endpoints",
+      "modes": {
+        "chat": "Chat",
+        "completions": "Text Completions",
+        "embeddings": "Embeddings",
+        "moderations": "Moderations",
+        "images": "Image Generation",
+        "edits": "Image Edits",
+        "audio_speech": "Speech Synthesis",
+        "audio_transcription": "Speech Transcription",
+        "audio_translation": "Speech Translation",
+        "rerank": "Rerank",
+        "responses": "Responses",
+        "videos": "Video Generation",
+        "proxy": "Generic Proxy"
+      },
+      "rpm": "Requests Per Minute Limit (RPM, 0 = unlimited)",
+      "rpm_placeholder": "e.g. 60",
+      "tpm": "Tokens Per Minute Limit (TPM, 0 = unlimited)",
+      "tpm_placeholder": "e.g. 100000",
+      "concurrency": "Concurrent Request Limit (0 = unlimited)",
+      "concurrency_placeholder": "e.g. 10",
+      "daily_quota_limit": "Daily Budget Limit (quota, 0 = unlimited)",
+      "daily_quota_limit_placeholder": "e.g. 500000 (about $1)",
+      "monthly_quota_limit": "Monthly Budget Limit (quota, 0 = unlimited)",
+      "monthly_quota_limit_placeholder": "e.g. 15000000 (about $30)",
       "ip_limit": "IP Restriction",
       "ip_limit_placeholder": "Please enter allowed subnets, e.g.: 192.168.0.0/24, use commas to separate multiple subnets",
       "expire_time": "Expiry Time",
@@ -217,7 +244,9 @@
       "messages": {
         "update_success": "Token updated successfully!",
         "create_success": "Token created successfully, please copy it from the list page!",
-        "expire_time_invalid": "Invalid expiry time format!"
+        "expire_time_invalid": "Invalid expiry time format!",
+        "load_failed": "Failed to load token information!",
+        "models_load_failed": "Failed to load model list!"
       }
     },
     "copy_options": {
@@ -433,6 +462,59 @@
         "date": "Date",
         "value": "Value"
       }
+    }
+  },
+  "operations": {
+    "title": "Operations Dashboard",
+    "load_failed": "Failed to load operations data",
+    "no_data": "No data",
+    "no_metric_data": "N/A",
+    "user_label": "{{name}} (#{{id}})",
+    "channel_label": "{{name}} (#{{id}})",
+    "notice": "Success rate comes from real-time metric sampling and requires the ENABLE_METRIC environment variable to be enabled; other metrics are aggregated from consumption logs within the time window.",
+    "range": {
+      "hours_1": "Last 1 hour",
+      "hours_24": "Last 24 hours",
+      "hours_168": "Last 7 days",
+      "hours_720": "Last 30 days"
+    },
+    "summary": {
+      "total_quota": "Total Quota Consumed",
+      "request_count": "Total Requests",
+      "prompt_tokens": "Input Tokens",
+      "completion_tokens": "Output Tokens"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "manually_disabled": "Manually Disabled",
+      "auto_disabled": "Auto Disabled",
+      "unknown": "Unknown"
+    },
+    "trend": {
+      "title": "Daily Consumption Trend (USD)",
+      "empty": "No consumption records in this time range",
+      "quota_series": "Consumption ($)"
+    },
+    "models": {
+      "title": "Top 10 Models by Consumption"
+    },
+    "users": {
+      "title": "Top 10 Users by Consumption"
+    },
+    "channels": {
+      "title": "Channel Health",
+      "empty": "No channel data"
+    },
+    "table": {
+      "model": "Model",
+      "user": "User",
+      "channel": "Channel",
+      "status": "Status",
+      "requests": "Requests",
+      "tokens": "Tokens",
+      "quota": "Consumption",
+      "success_rate": "Success Rate",
+      "avg_elapsed": "Avg Latency"
     }
   },
   "setting": {
@@ -709,6 +791,7 @@
         },
         "about": {
           "title": "About System",
+          "placeholder": "Enter new about content here, supports Markdown & HTML code. If a link is entered, it will be used as the src attribute of an iframe, allowing you to set any webpage as the about page.",
           "description": "You can set about content in settings page, supports HTML & Markdown",
           "repository": "Project Repository:",
           "loading_failed": "Failed to load about content..."
@@ -823,7 +906,8 @@
       "password_length": "Password must be at least 8 characters!",
       "password_mismatch": "Passwords do not match",
       "turnstile_wait": "Please wait a few seconds, Turnstile is checking the environment!",
-      "root_password": "Please change the default password immediately!"
+      "root_password": "Please change the default password immediately!",
+      "network": "Network error"
     },
     "notice": {
       "password_copied": "New password copied to clipboard: {{password}}"

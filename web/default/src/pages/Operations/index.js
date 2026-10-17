@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   Dropdown,
@@ -28,25 +29,30 @@ import { renderQuota } from '../../helpers/render';
 //   - /api/log/cost          成本分析（总额、模型、用户、渠道、日趋势）
 //   - /api/channel/health    渠道健康度（请求数、额度、成功率、平均耗时）
 
+// 时间窗口选项：只存词条键，文案在组件内翻译（模块级拿不到 t）
 const HOUR_OPTIONS = [
-  { key: 1, text: '最近 1 小时', value: 1 },
-  { key: 24, text: '最近 24 小时', value: 24 },
-  { key: 168, text: '最近 7 天', value: 168 },
-  { key: 720, text: '最近 30 天', value: 720 },
+  { key: 1, labelKey: 'operations.range.hours_1', value: 1 },
+  { key: 24, labelKey: 'operations.range.hours_24', value: 24 },
+  { key: 168, labelKey: 'operations.range.hours_168', value: 168 },
+  { key: 720, labelKey: 'operations.range.hours_720', value: 720 },
 ];
 
 const CHANNEL_STATUS = {
-  1: { text: '已启用', color: 'green' },
-  2: { text: '已手动禁用', color: 'orange' },
-  3: { text: '已自动禁用', color: 'red' },
+  1: { labelKey: 'operations.status.enabled', color: 'green' },
+  2: { labelKey: 'operations.status.manually_disabled', color: 'orange' },
+  3: { labelKey: 'operations.status.auto_disabled', color: 'red' },
 };
 
-const formatNumber = (value) => {
+// 数字千分位格式跟随界面语言：英文界面用 1,234,567 之外的本地习惯（en-US），
+// 中文界面保持 zh-CN，避免英文用户看到中文数字分组习惯。
+const formatNumber = (value, locale) => {
   const num = Number(value || 0);
-  return num.toLocaleString('zh-CN');
+  return num.toLocaleString(locale);
 };
 
 const Operations = () => {
+  const { t, i18n } = useTranslation();
+  const locale = (i18n.language || 'zh').startsWith('en') ? 'en-US' : 'zh-CN';
   const [hours, setHours] = useState(24);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({
@@ -82,7 +88,7 @@ const Operations = () => {
         showError(healthRes.data.message);
       }
     } catch (error) {
-      showError(error.message || '加载运营数据失败');
+      showError(error.message || t('operations.load_failed'));
     }
     setLoading(false);
   };
@@ -110,11 +116,15 @@ const Operations = () => {
             }}
           >
             <Header as='h3' style={{ margin: 0 }}>
-              运营看板
+              {t('operations.title')}
             </Header>
             <Dropdown
               selection
-              options={HOUR_OPTIONS}
+              options={HOUR_OPTIONS.map((option) => ({
+                key: option.key,
+                value: option.value,
+                text: t(option.labelKey),
+              }))}
               value={hours}
               onChange={(_, { value }) => setHours(value)}
             />
@@ -125,36 +135,36 @@ const Operations = () => {
       <Segment loading={loading}>
         <Statistic.Group widths={4} size='small'>
           <Statistic>
-            <Statistic.Value>{renderQuota(summary.quota || 0)}</Statistic.Value>
-            <Statistic.Label>总消耗额度</Statistic.Label>
+            <Statistic.Value>{renderQuota(summary.quota || 0, t)}</Statistic.Value>
+            <Statistic.Label>{t('operations.summary.total_quota')}</Statistic.Label>
           </Statistic>
           <Statistic>
             <Statistic.Value>
-              {formatNumber(summary.request_count)}
+              {formatNumber(summary.request_count, locale)}
             </Statistic.Value>
-            <Statistic.Label>总请求数</Statistic.Label>
+            <Statistic.Label>{t('operations.summary.request_count')}</Statistic.Label>
           </Statistic>
           <Statistic>
             <Statistic.Value>
-              {formatNumber(summary.prompt_tokens)}
+              {formatNumber(summary.prompt_tokens, locale)}
             </Statistic.Value>
-            <Statistic.Label>输入 Token</Statistic.Label>
+            <Statistic.Label>{t('operations.summary.prompt_tokens')}</Statistic.Label>
           </Statistic>
           <Statistic>
             <Statistic.Value>
-              {formatNumber(summary.completion_tokens)}
+              {formatNumber(summary.completion_tokens, locale)}
             </Statistic.Value>
-            <Statistic.Label>输出 Token</Statistic.Label>
+            <Statistic.Label>{t('operations.summary.completion_tokens')}</Statistic.Label>
           </Statistic>
         </Statistic.Group>
       </Segment>
 
       <Card fluid className='chart-card'>
         <Card.Content>
-          <Card.Header>每日消耗趋势（美元）</Card.Header>
+          <Card.Header>{t('operations.trend.title')}</Card.Header>
           <div style={{ height: 260, marginTop: 12 }}>
             {dailyChartData.length === 0 ? (
-              <Message info>该时间范围内暂无消费记录</Message>
+              <Message info>{t('operations.trend.empty')}</Message>
             ) : (
               <ResponsiveContainer width='100%' height='100%'>
                 <BarChart data={dailyChartData}>
@@ -169,7 +179,7 @@ const Operations = () => {
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                     }}
                   />
-                  <Bar dataKey='quota' name='消耗（$）' fill='#4318FF' radius={[4, 4, 0, 0]} />
+                  <Bar dataKey='quota' name={t('operations.trend.quota_series')} fill='#4318FF' radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -181,21 +191,21 @@ const Operations = () => {
         <Grid.Column>
           <Card fluid className='chart-card'>
             <Card.Content>
-              <Card.Header>模型消耗 Top 10</Card.Header>
+              <Card.Header>{t('operations.models.title')}</Card.Header>
               <Table basic='very' compact unstackable>
                 <Table.Header>
                   <Table.Row>
-                    <Table.HeaderCell>模型</Table.HeaderCell>
-                    <Table.HeaderCell textAlign='right'>请求数</Table.HeaderCell>
-                    <Table.HeaderCell textAlign='right'>Token</Table.HeaderCell>
-                    <Table.HeaderCell textAlign='right'>消耗</Table.HeaderCell>
+                    <Table.HeaderCell>{t('operations.table.model')}</Table.HeaderCell>
+                    <Table.HeaderCell textAlign='right'>{t('operations.table.requests')}</Table.HeaderCell>
+                    <Table.HeaderCell textAlign='right'>{t('operations.table.tokens')}</Table.HeaderCell>
+                    <Table.HeaderCell textAlign='right'>{t('operations.table.quota')}</Table.HeaderCell>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {modelStats.length === 0 ? (
                     <Table.Row>
                       <Table.Cell colSpan='4'>
-                        <Message info>暂无数据</Message>
+                        <Message info>{t('operations.no_data')}</Message>
                       </Table.Cell>
                     </Table.Row>
                   ) : (
@@ -203,15 +213,16 @@ const Operations = () => {
                       <Table.Row key={item.model_name}>
                         <Table.Cell>{item.model_name}</Table.Cell>
                         <Table.Cell textAlign='right'>
-                          {formatNumber(item.request_count)}
+                          {formatNumber(item.request_count, locale)}
                         </Table.Cell>
                         <Table.Cell textAlign='right'>
                           {formatNumber(
-                            (item.prompt_tokens || 0) + (item.completion_tokens || 0)
+                            (item.prompt_tokens || 0) + (item.completion_tokens || 0),
+                            locale
                           )}
                         </Table.Cell>
                         <Table.Cell textAlign='right'>
-                          {renderQuota(item.quota)}
+                          {renderQuota(item.quota, t)}
                         </Table.Cell>
                       </Table.Row>
                     ))
@@ -225,33 +236,36 @@ const Operations = () => {
         <Grid.Column>
           <Card fluid className='chart-card'>
             <Card.Content>
-              <Card.Header>用户消耗 Top 10</Card.Header>
+              <Card.Header>{t('operations.users.title')}</Card.Header>
               <Table basic='very' compact unstackable>
                 <Table.Header>
                   <Table.Row>
-                    <Table.HeaderCell>用户</Table.HeaderCell>
-                    <Table.HeaderCell textAlign='right'>请求数</Table.HeaderCell>
-                    <Table.HeaderCell textAlign='right'>消耗</Table.HeaderCell>
+                    <Table.HeaderCell>{t('operations.table.user')}</Table.HeaderCell>
+                    <Table.HeaderCell textAlign='right'>{t('operations.table.requests')}</Table.HeaderCell>
+                    <Table.HeaderCell textAlign='right'>{t('operations.table.quota')}</Table.HeaderCell>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {userStats.length === 0 ? (
                     <Table.Row>
                       <Table.Cell colSpan='3'>
-                        <Message info>暂无数据</Message>
+                        <Message info>{t('operations.no_data')}</Message>
                       </Table.Cell>
                     </Table.Row>
                   ) : (
                     userStats.map((item) => (
                       <Table.Row key={`${item.user_id}-${item.username}`}>
                         <Table.Cell>
-                          {item.username}（#{item.user_id}）
+                          {t('operations.user_label', {
+                            name: item.username,
+                            id: item.user_id,
+                          })}
                         </Table.Cell>
                         <Table.Cell textAlign='right'>
-                          {formatNumber(item.request_count)}
+                          {formatNumber(item.request_count, locale)}
                         </Table.Cell>
                         <Table.Cell textAlign='right'>
-                          {renderQuota(item.quota)}
+                          {renderQuota(item.quota, t)}
                         </Table.Cell>
                       </Table.Row>
                     ))
@@ -265,49 +279,52 @@ const Operations = () => {
 
       <Card fluid className='chart-card'>
         <Card.Content>
-          <Card.Header>渠道健康度</Card.Header>
+          <Card.Header>{t('operations.channels.title')}</Card.Header>
           <Table basic='very' compact unstackable>
             <Table.Header>
               <Table.Row>
-                <Table.HeaderCell>渠道</Table.HeaderCell>
-                <Table.HeaderCell>状态</Table.HeaderCell>
-                <Table.HeaderCell textAlign='right'>请求数</Table.HeaderCell>
-                <Table.HeaderCell textAlign='right'>成功率</Table.HeaderCell>
-                <Table.HeaderCell textAlign='right'>平均耗时</Table.HeaderCell>
-                <Table.HeaderCell textAlign='right'>消耗</Table.HeaderCell>
+                <Table.HeaderCell>{t('operations.table.channel')}</Table.HeaderCell>
+                <Table.HeaderCell>{t('operations.table.status')}</Table.HeaderCell>
+                <Table.HeaderCell textAlign='right'>{t('operations.table.requests')}</Table.HeaderCell>
+                <Table.HeaderCell textAlign='right'>{t('operations.table.success_rate')}</Table.HeaderCell>
+                <Table.HeaderCell textAlign='right'>{t('operations.table.avg_elapsed')}</Table.HeaderCell>
+                <Table.HeaderCell textAlign='right'>{t('operations.table.quota')}</Table.HeaderCell>
               </Table.Row>
             </Table.Header>
             <Table.Body>
               {channelHealth.length === 0 ? (
                 <Table.Row>
                   <Table.Cell colSpan='6'>
-                    <Message info>暂无渠道数据</Message>
+                    <Message info>{t('operations.channels.empty')}</Message>
                   </Table.Cell>
                 </Table.Row>
               ) : (
                 channelHealth.map((item) => {
                   const status = CHANNEL_STATUS[item.status] || {
-                    text: '未知',
+                    labelKey: 'operations.status.unknown',
                     color: 'grey',
                   };
                   const hasMetric = item.success_rate >= 0;
                   return (
                     <Table.Row key={item.channel_id}>
                       <Table.Cell>
-                        {item.name}（#{item.channel_id}）
+                        {t('operations.channel_label', {
+                          name: item.name,
+                          id: item.channel_id,
+                        })}
                       </Table.Cell>
                       <Table.Cell>
                         <Label color={status.color} size='small'>
-                          {status.text}
+                          {t(status.labelKey)}
                         </Label>
                       </Table.Cell>
                       <Table.Cell textAlign='right'>
-                        {formatNumber(item.request_count)}
+                        {formatNumber(item.request_count, locale)}
                       </Table.Cell>
                       <Table.Cell textAlign='right'>
                         {hasMetric
                           ? `${(item.success_rate * 100).toFixed(1)}%`
-                          : '无数据'}
+                          : t('operations.no_metric_data')}
                       </Table.Cell>
                       <Table.Cell textAlign='right'>
                         {item.avg_elapsed_time > 0
@@ -315,7 +332,7 @@ const Operations = () => {
                           : '-'}
                       </Table.Cell>
                       <Table.Cell textAlign='right'>
-                        {renderQuota(item.quota)}
+                        {renderQuota(item.quota, t)}
                       </Table.Cell>
                     </Table.Row>
                   );
@@ -323,10 +340,7 @@ const Operations = () => {
               )}
             </Table.Body>
           </Table>
-          <Message size='small'>
-            成功率来自实时监控采样，需要开启 `ENABLE_METRIC` 环境变量后才有数据；
-            其余指标按时间窗口从消费日志统计。
-          </Message>
+          <Message size='small'>{t('operations.notice')}</Message>
         </Card.Content>
       </Card>
     </div>

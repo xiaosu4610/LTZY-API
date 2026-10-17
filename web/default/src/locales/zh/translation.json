@@ -196,6 +196,33 @@
       "name_placeholder": "请输入名称",
       "models": "模型范围",
       "models_placeholder": "请选择允许使用的模型，留空则不进行限制",
+      "allowed_modes": "可调用的接口范围（不选表示不限制）",
+      "allowed_modes_placeholder": "不选则允许全部接口",
+      "modes": {
+        "chat": "对话",
+        "completions": "文本补全",
+        "embeddings": "向量嵌入",
+        "moderations": "内容审核",
+        "images": "图像生成",
+        "edits": "图像编辑",
+        "audio_speech": "语音合成",
+        "audio_transcription": "语音识别",
+        "audio_translation": "语音翻译",
+        "rerank": "重排",
+        "responses": "Responses",
+        "videos": "视频生成",
+        "proxy": "通用代理"
+      },
+      "rpm": "每分钟请求数上限（RPM，0 表示不限）",
+      "rpm_placeholder": "例如 60",
+      "tpm": "每分钟 Token 上限（TPM，0 表示不限）",
+      "tpm_placeholder": "例如 100000",
+      "concurrency": "并发请求数上限（0 表示不限）",
+      "concurrency_placeholder": "例如 10",
+      "daily_quota_limit": "每日预算上限（额度，0 表示不限）",
+      "daily_quota_limit_placeholder": "例如 500000（约 1 美元）",
+      "monthly_quota_limit": "每月预算上限（额度，0 表示不限）",
+      "monthly_quota_limit_placeholder": "例如 15000000（约 30 美元）",
       "ip_limit": "IP 限制",
       "ip_limit_placeholder": "请输入允许访问的网段，例如：192.168.0.0/24，请使用英文逗号分隔多个网段",
       "expire_time": "过期时间",
@@ -217,7 +244,9 @@
       "messages": {
         "update_success": "令牌更新成功！",
         "create_success": "令牌创建成功，请在列表页面点击复制获取令牌！",
-        "expire_time_invalid": "过期时间格式错误！"
+        "expire_time_invalid": "过期时间格式错误！",
+        "load_failed": "令牌信息加载失败！",
+        "models_load_failed": "模型列表加载失败！"
       }
     },
     "copy_options": {
@@ -433,6 +462,59 @@
         "date": "日期",
         "value": "数值"
       }
+    }
+  },
+  "operations": {
+    "title": "运营看板",
+    "load_failed": "加载运营数据失败",
+    "no_data": "暂无数据",
+    "no_metric_data": "无数据",
+    "user_label": "{{name}}（#{{id}}）",
+    "channel_label": "{{name}}（#{{id}}）",
+    "notice": "成功率来自实时监控采样，需要开启 ENABLE_METRIC 环境变量后才有数据；其余指标按时间窗口从消费日志统计。",
+    "range": {
+      "hours_1": "最近 1 小时",
+      "hours_24": "最近 24 小时",
+      "hours_168": "最近 7 天",
+      "hours_720": "最近 30 天"
+    },
+    "summary": {
+      "total_quota": "总消耗额度",
+      "request_count": "总请求数",
+      "prompt_tokens": "输入 Token",
+      "completion_tokens": "输出 Token"
+    },
+    "status": {
+      "enabled": "已启用",
+      "manually_disabled": "已手动禁用",
+      "auto_disabled": "已自动禁用",
+      "unknown": "未知"
+    },
+    "trend": {
+      "title": "每日消耗趋势（美元）",
+      "empty": "该时间范围内暂无消费记录",
+      "quota_series": "消耗（$）"
+    },
+    "models": {
+      "title": "模型消耗 Top 10"
+    },
+    "users": {
+      "title": "用户消耗 Top 10"
+    },
+    "channels": {
+      "title": "渠道健康度",
+      "empty": "暂无渠道数据"
+    },
+    "table": {
+      "model": "模型",
+      "user": "用户",
+      "channel": "渠道",
+      "status": "状态",
+      "requests": "请求数",
+      "tokens": "Token",
+      "quota": "消耗",
+      "success_rate": "成功率",
+      "avg_elapsed": "平均耗时"
     }
   },
   "setting": {
@@ -819,7 +901,8 @@
       "password_length": "密码长度不得小于 8 位！",
       "password_mismatch": "两次输入的密码不一致",
       "turnstile_wait": "请稍后几秒重试，Turnstile 正在检查用户环境！",
-      "root_password": "请立刻修改默认密码！"
+      "root_password": "请立刻修改默认密码！",
+      "network": "网络错误"
     },
     "notice": {
       "password_copied": "新密码已复制到剪贴板：{{password}}"
