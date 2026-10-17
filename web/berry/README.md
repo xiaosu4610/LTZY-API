@@ -1,3 +1,15 @@
+> ## ⚠️ 该主题已冻结（LTZY-API 二开）
+>
+> 自 LTZY-API 二开起，本主题（`web/berry`）**不再同步新功能**。原因：
+> 1. 没有 `node_modules` 与锁文件，**改完无法构建验证**；
+> 2. 没有 i18n 机制（约 543 处硬编码中文 / 54 个文件）；
+> 3. 功能落后最多：缺 rpm/tpm/concurrency/日预算/月预算/接口 scope/批量新建/
+>    运营看板 `/operations`/聊天页 `/chat`/i18n 全部缺失。
+>
+> 现在唯一主线主题是 **`web/default`**。如需恢复本主题请看
+> [`web/E8-THEME-CONVERGENCE.md`](../E8-THEME-CONVERGENCE.md)。
+>
+> 以下为上游原始说明。
 # One API 前端界面
 
 这个项目是 One API 的前端界面，它基于 [Berry Free React Admin Template](https://github.com/codedthemes/berry-free-react-admin-template) 进行开发。

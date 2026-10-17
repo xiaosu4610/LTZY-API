@@ -19,6 +19,30 @@ import {
 import Title from '@douyinfe/semi-ui/lib/es/typography/title';
 import { Divider } from 'semantic-ui-react';
 
+// 可选的中继模式（LTZY-API 新增，C3）：取值必须与后端 relay/relaymode/name.go 逐字一致，
+// 后端会拒绝未知模式名，这里只做展示。
+const ALLOWED_MODE_OPTIONS = [
+  { value: 'chat', label: '对话 /v1/chat/completions' },
+  { value: 'completions', label: '文本补全 /v1/completions' },
+  { value: 'embeddings', label: '向量嵌入 /v1/embeddings' },
+  { value: 'moderations', label: '内容审核 /v1/moderations' },
+  { value: 'images', label: '图像生成 /v1/images/generations' },
+  { value: 'edits', label: '图像编辑 /v1/edits' },
+  { value: 'audio_speech', label: '语音合成 /v1/audio/speech' },
+  { value: 'audio_transcription', label: '语音识别 /v1/audio/transcriptions' },
+  { value: 'audio_translation', label: '语音翻译 /v1/audio/translations' },
+  { value: 'audio_voice', label: '声音复刻 /v1/audio/voices' },
+  { value: 'rerank', label: '重排 /v1/rerank' },
+  { value: 'responses', label: 'Responses /v1/responses' },
+  { value: 'videos', label: '视频生成 /v1/videos' },
+  { value: 'proxy', label: '通用代理 /v1/oneapi/proxy' },
+  { value: 'files', label: '文件 /v1/files' },
+  { value: 'fine_tuning', label: '微调任务 /v1/fine_tuning/jobs' },
+  { value: 'assistants', label: '助手 /v1/assistants' },
+  { value: 'threads', label: '会话线程 /v1/threads' },
+  { value: 'models', label: '模型管理 /v1/models/{model}' },
+];
+
 const EditToken = (props) => {
   const [isEdit, setIsEdit] = useState(false);
   const [loading, setLoading] = useState(isEdit);
@@ -28,7 +52,8 @@ const EditToken = (props) => {
     expired_time: -1,
     unlimited_quota: false,
     model_limits_enabled: false,
-    model_limits: []
+    model_limits: [],
+    allowed_modes: []
   };
   const [inputs, setInputs] = useState(originInputs);
   const { name, remain_quota, expired_time, unlimited_quota, model_limits_enabled, model_limits } = inputs;
@@ -81,6 +106,12 @@ const EditToken = (props) => {
     if (success) {
       if (data.expired_time !== -1) {
         data.expired_time = timestamp2string(data.expired_time);
+      }
+      // 接口范围：后端存逗号分隔字符串，表单用数组（LTZY-API 新增，C3）
+      if (data.allowed_modes) {
+        data.allowed_modes = data.allowed_modes.split(',').filter((x) => x);
+      } else {
+        data.allowed_modes = [];
       }
       // if (data.model_limits !== '') {
       //   data.model_limits = data.model_limits.split(',');
@@ -148,6 +179,8 @@ const EditToken = (props) => {
         localInputs.expired_time = Math.ceil(time / 1000);
       }
       // localInputs.model_limits = localInputs.model_limits.join(',');
+      // 接口范围存成逗号分隔字符串，空数组表示不限制（LTZY-API 新增，C3）
+      localInputs.allowed_modes = (localInputs.allowed_modes || []).join(',');
       let res = await API.put(`/api/token/`, { ...localInputs, id: parseInt(props.editingToken.id) });
       const { success, message } = res.data;
       if (success) {
@@ -178,6 +211,9 @@ const EditToken = (props) => {
           localInputs.expired_time = Math.ceil(time / 1000);
         }
         // localInputs.model_limits = localInputs.model_limits.join(',');
+        // 接口范围同样要序列化（LTZY-API 新增，C3）：漏了这里会导致
+        // 「批量新建的令牌没有 scope」，而单个编辑却有 —— 属于最难发现的那类不一致
+        localInputs.allowed_modes = (localInputs.allowed_modes || []).join(',');
         let res = await API.post(`/api/token/`, localInputs);
         const { success, message } = res.data;
 
@@ -314,6 +350,20 @@ const EditToken = (props) => {
             min={0}
             onChange={(value) => handleInputChange('monthly_quota_limit', value || 0)}
             value={inputs.monthly_quota_limit || 0}
+          />
+          {/* 接口范围（LTZY-API 新增，C3）：不选表示不限制。
+              取值必须与后端 relay/relaymode/name.go 的模式名逐字一致。 */}
+          <div style={{ marginTop: 20 }}>
+            <Typography.Text>可调用的接口范围（不选表示不限制）</Typography.Text>
+          </div>
+          <Select
+            mode="multiple"
+            allowClear
+            style={{ marginTop: 8, width: '100%' }}
+            placeholder="不选则允许全部接口"
+            value={inputs.allowed_modes || []}
+            onChange={(value) => handleInputChange('allowed_modes', value)}
+            options={ALLOWED_MODE_OPTIONS}
           />
 
           <Divider />
