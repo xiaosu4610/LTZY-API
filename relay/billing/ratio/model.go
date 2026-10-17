@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
 )
 
@@ -14,7 +15,28 @@ const (
 	USD       = 500 // $0.002 = 1 -> $1 = 500
 	MILLI_USD = 1.0 / 1000 * USD
 	RMB       = USD / USD2RMB
+
+	// legacyQuotaPerUnit 是倍率表的历史计价基准：$1 = 500,000 quota。
+	// ModelRatio 里 1 的含义是「$0.002 / 1K tokens」=「1 quota / token」。
+	legacyQuotaPerUnit = 500 * 1000.0
 )
+
+// RatioScale 把「以美元为基准的倍率」换算到当前货币口径。
+//
+// LTZY-API 统一按人民币计价（1 元 = config.QuotaPerUnit 个 quota），
+// 而倍率表沿用的是美元基准（$1 = 500,000 quota）。两者相差：
+//
+//	1 倍率 = $0.002 / 1K tokens = ¥0.014 / 1K tokens = 14 quota / token
+//
+// 因此所有倍率在参与扣费前都要乘这个系数，否则实际扣费会少收 14 倍。
+// 管理员在后台调整倍率时，看到的仍是「相对官方报价的倍数」这一语义。
+func RatioScale() float64 {
+	unit := config.QuotaPerUnit
+	if unit <= 0 {
+		return 1
+	}
+	return unit / legacyQuotaPerUnit * USD2RMB
+}
 
 var modelRatioLock sync.RWMutex
 

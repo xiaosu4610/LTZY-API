@@ -44,6 +44,10 @@ type UsageInput struct {
 // CalcQuota 根据定价模型计算本次请求消耗的额度
 func (m PricingModel) CalcQuota(input UsageInput, groupRatio float64) int64 {
 	var quota float64
+	// RatioScale：倍率表以美元为基准（$1 = 500,000 quota），
+	// 而本系统统一按人民币计价（1 元 = config.QuotaPerUnit quota），
+	// 所有倍率参与扣费前都要换算，否则实际扣费会少收一个固定倍数。
+	scale := ratio.RatioScale()
 	switch m.Mode {
 	case PricingModePerRequest:
 		quota = float64(input.Count) * m.PerUnitQuota * groupRatio
@@ -78,7 +82,8 @@ func (m PricingModel) CalcQuota(input UsageInput, groupRatio float64) int64 {
 		if completionPart < 0 {
 			completionPart = 0
 		}
-		quota = (float64(input.PromptTokens)*promptRatio + completionPart) * m.ModelRatio * groupRatio * tieredRatio
+		// ratio 已在函数入口按当前货币口径换算过一次，这里直接复用同一系数
+		quota = (float64(input.PromptTokens)*promptRatio + completionPart) * m.ModelRatio * groupRatio * tieredRatio * scale
 		if math.IsNaN(quota) || math.IsInf(quota, 0) || quota <= 0 {
 			return 0
 		}

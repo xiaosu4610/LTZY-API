@@ -75,7 +75,8 @@ func RelayResponsesHelper(c *gin.Context) *relaymodel.ErrorWithStatusCode {
 	// 分组×模型 二维定价（LTZY-API 新增，B3）
 	groupRatio := billingratio.GetGroupRatioForModel(meta.Group, probe.Model)
 	// 用量阶梯倍率（LTZY-API 新增，B4）
-	ratio := modelRatio * groupRatio * tieredRatio(probe.Model, meta.UserId)
+	// RatioScale：倍率表以美元为基准，本系统按人民币计价，扣费前统一换算
+	ratio := modelRatio * groupRatio * tieredRatio(probe.Model, meta.UserId) * billingratio.RatioScale()
 
 	// 预扣额度（Responses 请求体非 chat messages，无法精确预估 token，
 	// 仅按 PreConsumedQuota 兜底预估，最终以响应 usage 结算）

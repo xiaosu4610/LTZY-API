@@ -44,7 +44,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setUser: (user) => set({ user, userLoaded: true }),
   setUserLoaded: (userLoaded) => set({ userLoaded }),
-  quotaPerUnit: () => get().status?.quota_per_unit || 500000,
+  quotaPerUnit: () => get().status?.quota_per_unit || 1000000,
   isAdmin: () => (get().user?.role ?? 0) >= 10,
   isRoot: () => (get().user?.role ?? 0) >= 100,
   toggleTheme: () => {

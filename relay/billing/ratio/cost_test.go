@@ -1,6 +1,9 @@
 package ratio
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 // TestCostRatioFallback 未配置进价时成本为 0（表示"未知成本"，不是"零成本"）
 func TestCostRatioFallback(t *testing.T) {
@@ -25,9 +28,9 @@ func TestCalcCostQuota(t *testing.T) {
 	defer func() { _ = UpdateCostRatioByJSONString("") }()
 
 	completionRatio := GetCompletionRatio("gpt-4o", 0)
-	// 与售价口径一致：(prompt + completion × completionRatio) × 进价倍率
+	// 与售价口径一致：(prompt + completion × completionRatio) × 进价倍率 × 货币换算系数
 	const costRatio = 0.5
-	want := int64((float64(1000) + float64(500)*completionRatio) * costRatio)
+	want := int64(math.Ceil((float64(1000) + float64(500)*completionRatio) * costRatio * RatioScale()))
 	got := CalcCostQuota("gpt-4o", 1000, 500)
 	if got != want {
 		t.Fatalf("成本计算不符：got %d, want %d (completionRatio=%v)", got, want, completionRatio)

@@ -47,7 +47,8 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// 用量阶梯倍率（LTZY-API 新增，B4）：未配置阶梯时为 1.0。
 	// 只算一次并透传给结算，保证预扣与结算用的是同一档位（并发请求下重算会不一致）。
 	tiered := tieredRatio(textRequest.Model, meta.UserId)
-	ratio := modelRatio * groupRatio * tiered
+	// RatioScale：倍率表以美元为基准，本系统按人民币计价，扣费前统一换算
+	ratio := modelRatio * groupRatio * tiered * billingratio.RatioScale()
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
 	meta.PromptTokens = promptTokens

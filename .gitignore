@@ -4,6 +4,9 @@ upload
 *.exe
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
+*.db.bak.*
 build
 !web/build
 !web/build/default

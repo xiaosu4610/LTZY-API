@@ -1,8 +1,10 @@
 // 金额/额度换算与展示。
-// 后端所有额度都以 quota 为最小单位存储，quota_per_unit 决定「1 美元 = 多少 quota」。
-// 展示口径与旧版一致：quota / quota_per_unit = 金额。
+// 后端所有额度都以 quota 为最小单位存储，quota_per_unit 表示「1 个货币单位 = 多少 quota」。
+// LTZY-API 统一按人民币计价：1 元 = 1,000,000 quota。
 
-export const DEFAULT_QUOTA_PER_UNIT = 500000;
+export const DEFAULT_QUOTA_PER_UNIT = 1000000;
+
+export const CURRENCY_SYMBOL = '¥';
 
 export function quotaToAmount(quota: number, quotaPerUnit = DEFAULT_QUOTA_PER_UNIT): number {
   if (!quotaPerUnit) return 0;
@@ -13,7 +15,7 @@ export function formatMoney(amount: number, fractionDigits = 4): string {
   const abs = Math.abs(amount);
   // 小额显示更多小数位，避免一片 0.0000
   const digits = abs > 0 && abs < 0.01 ? 6 : fractionDigits;
-  return `$${amount.toFixed(digits)}`;
+  return `${CURRENCY_SYMBOL}${amount.toFixed(digits)}`;
 }
 
 export function formatQuota(quota: number, quotaPerUnit = DEFAULT_QUOTA_PER_UNIT): string {

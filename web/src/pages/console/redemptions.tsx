@@ -157,7 +157,7 @@ export default function RedemptionsPage() {
           <Field label={t('redemption.name')}>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
-          <Field label={t('redemption.quota')} hint={`1 USD = ${quotaPerUnit} quota`}>
+          <Field label={t('redemption.quota')} hint={`1 元 = ${quotaPerUnit} quota`}>
             <Input type="number" value={form.quota} onChange={(e) => setForm({ ...form, quota: e.target.value })} />
           </Field>
           <Field label={t('redemption.quantity')}>

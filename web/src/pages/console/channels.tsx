@@ -46,7 +46,6 @@ const emptyForm: ChannelForm = {
 export default function ChannelsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const quotaPerUnit = useAppStore((s) => s.quotaPerUnit());
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -179,7 +178,7 @@ export default function ChannelsPage() {
       align: 'right',
       render: (row) => (
         <span className="font-mono text-xs">
-          {row.balance > 0 ? `$${(row.balance / quotaPerUnit).toFixed(2)}` : '—'}
+          {row.balance > 0 ? `$${row.balance.toFixed(2)}` : '—'}
         </span>
       ),
     },

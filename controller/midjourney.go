@@ -311,7 +311,8 @@ func calcMidjourneyQuota(ctx context.Context, userId int, action string) (quota 
 	}
 	groupRatio = billingratio.GetGroupRatioForModel(group, modelName)
 
-	quota = int64(modelRatio * groupRatio * midjourneyQuotaUnit)
+	// RatioScale：倍率表以美元为基准，本系统按人民币计价，扣费前统一换算
+	quota = int64(modelRatio * groupRatio * midjourneyQuotaUnit * billingratio.RatioScale())
 	if quota < 0 {
 		quota = 0
 	}

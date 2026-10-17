@@ -21,7 +21,7 @@ const OPTION_LABELS: Record<string, { label: string; desc?: string; multiline?: 
   HomePageContent: { label: '首页自定义内容', desc: '显示在首页能力卡片下方', multiline: true },
   Footer: { label: '页脚自定义内容', desc: '支持 HTML，留空显示默认版权', multiline: true },
   ServerAddress: { label: '服务器公开地址', desc: '用于首页示例命令与文档链接' },
-  QuotaPerUnit: { label: '每美元额度', desc: '1 美元折算多少 quota，改动会影响全部展示金额' },
+  QuotaPerUnit: { label: '每元额度', desc: '1 元人民币折算多少 quota，改动会影响全部展示金额（默认 1000000）' },
   RetryTimes: { label: '失败重试次数', desc: '上游失败后自动切换渠道重试的次数' },
   TopUpLink: { label: '充值页面链接', desc: '留空则隐藏在线充值入口' },
   ChatLink: { label: '对话页面链接', desc: '留空则隐藏聊天入口' },

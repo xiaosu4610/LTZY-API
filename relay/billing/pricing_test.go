@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/xiaosu4610/LTZY-API/common/config"
+	"github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
 )
 
-// TestPricingTokenMode 验证 token 模式下按 (prompt + completion*completionRatio) * modelRatio * groupRatio 计算
+// TestPricingTokenMode 验证 token 模式下按
+// (prompt + completion*completionRatio) * modelRatio * groupRatio * RatioScale 计算
 func TestPricingTokenMode(t *testing.T) {
 	m := PricingModel{
 		Mode:            PricingModeToken,
@@ -15,21 +17,23 @@ func TestPricingTokenMode(t *testing.T) {
 		CompletionRatio: 4,
 		PromptRatio:     1,
 	}
+	scale := ratio.RatioScale()
 	got := m.CalcQuota(UsageInput{PromptTokens: 1000, CompletionTokens: 500}, 1)
-	want := int64(6000) // (1000 + 500*4) * 2
+	want := int64(math.Ceil((1000 + 500*4) * 2 * scale)) // 倍率需按当前货币口径换算
 	if got != want {
 		t.Fatalf("token 模式额度错误，got %d, want %d", got, want)
 	}
 
 	// 群组倍率生效
 	got = m.CalcQuota(UsageInput{PromptTokens: 1000, CompletionTokens: 500}, 2)
-	if got != want*2 {
-		t.Fatalf("群组倍率未生效，got %d, want %d", got, want*2)
+	if want = want * 2; got != want {
+		t.Fatalf("群组倍率未生效，got %d, want %d", got, want)
 	}
 }
 
 // TestPricingReasoningTokenRatio 验证 reasoning token 使用单独的推理倍率
 func TestPricingReasoningTokenRatio(t *testing.T) {
+	scale := ratio.RatioScale()
 	input := UsageInput{PromptTokens: 0, CompletionTokens: 1000, ReasoningTokens: 1000}
 	// completionRatio=4, reasoningRatio=8 -> 1000*4 + 1000*(8-4) = 8000
 	m := PricingModel{
@@ -38,14 +42,14 @@ func TestPricingReasoningTokenRatio(t *testing.T) {
 		CompletionRatio: 4,
 		ReasoningRatio:  8,
 	}
-	if got := m.CalcQuota(input, 1); got != 8000 {
-		t.Fatalf("reasoning 倍率计算错误，got %d, want 8000", got)
+	if want := int64(math.Ceil(8000 * scale)); m.CalcQuota(input, 1) != want {
+		t.Fatalf("reasoning 倍率计算错误，got %d, want %d", m.CalcQuota(input, 1), want)
 	}
 
 	// ReasoningRatio 为 0 时回退到 CompletionRatio
 	m.ReasoningRatio = 0
-	if got := m.CalcQuota(input, 1); got != 4000 {
-		t.Fatalf("reasoning 倍率回退错误，got %d, want 4000", got)
+	if want := int64(math.Ceil(4000 * scale)); m.CalcQuota(input, 1) != want {
+		t.Fatalf("reasoning 倍率回退错误，got %d, want %d", m.CalcQuota(input, 1), want)
 	}
 }
 
@@ -147,14 +151,15 @@ func setReasoningRatioOption(t *testing.T, value string) {
 func TestCalcQuotaAppliesTieredRatio(t *testing.T) {
 	usage := UsageInput{PromptTokens: 1000, CompletionTokens: 500}
 	base := PricingModel{Mode: PricingModeToken, ModelRatio: 2, CompletionRatio: 4, PromptRatio: 1}
+	scale := ratio.RatioScale()
 
-	full := base.CalcQuota(usage, 1) // (1000 + 500*4) * 2 = 6000
-	if full != 6000 {
-		t.Fatalf("无阶梯时应为 6000，实际 %d", full)
+	full := base.CalcQuota(usage, 1) // (1000 + 500*4) * 2 * scale
+	if want := int64(math.Ceil(6000 * scale)); full != want {
+		t.Fatalf("无阶梯时应为 %d，实际 %d", want, full)
 	}
 	base.TieredRatio = 0.5
-	if got := base.CalcQuota(usage, 1); got != 3000 {
-		t.Fatalf("阶梯倍率 0.5 未生效，实际 %d，期望 3000", got)
+	if got, want := base.CalcQuota(usage, 1), int64(math.Ceil(3000*scale)); got != want {
+		t.Fatalf("阶梯倍率 0.5 未生效，实际 %d，期望 %d", got, want)
 	}
 	// TieredRatio 为 0（未配置）必须等价于 1.0，保证与旧公式一致
 	base.TieredRatio = 0
@@ -166,10 +171,12 @@ func TestCalcQuotaAppliesTieredRatio(t *testing.T) {
 // TestCalcQuotaEquivalentToLegacy 锁死统一定价引擎与旧计费公式的等价性（B1 接入的安全网）。
 // 旧公式（helper.go 改造前）：ceil((prompt + completion*completionRatio) * modelRatio * groupRatio)，
 // 倍率非零但结果非正时兜底为 1。ReasoningRatio 未配置（=补全倍率）时两者必须逐分不差。
+// 人民币计价改造后，新引擎在此基础上多乘一个 RatioScale()（倍率表美元基准 → 人民币口径）。
 func TestCalcQuotaEquivalentToLegacy(t *testing.T) {
 	setReasoningRatioOption(t, "")
 	defer setReasoningRatioOption(t, "")
 
+	scale := ratio.RatioScale()
 	cases := []struct {
 		prompt, completion int
 		modelRatio         float64
@@ -187,7 +194,7 @@ func TestCalcQuotaEquivalentToLegacy(t *testing.T) {
 	}
 	const completionRatio = 4.0
 	for _, tc := range cases {
-		legacy := int64(math.Ceil((float64(tc.prompt) + float64(tc.completion)*completionRatio) * tc.modelRatio * tc.groupRatio))
+		legacy := int64(math.Ceil((float64(tc.prompt) + float64(tc.completion)*completionRatio) * tc.modelRatio * tc.groupRatio * scale))
 		m := PricingModel{
 			Mode:            PricingModeToken,
 			ModelRatio:      tc.modelRatio,

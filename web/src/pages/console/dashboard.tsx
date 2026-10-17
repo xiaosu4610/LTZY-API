@@ -16,7 +16,7 @@ import {
 import { Activity, Coins, KeyRound, TrendingUp } from 'lucide-react';
 import { getData } from '@/lib/api';
 import { useAppStore } from '@/stores/app';
-import { formatNumber, formatQuota, quotaToAmount } from '@/lib/format';
+import { formatNumber, formatQuota } from '@/lib/format';
 import { Card, CardBody, CardHeader, Empty, Skeleton } from '@/components/ui/card';
 import { PageHeader, StatCard } from '@/components/ui/page';
 
@@ -91,7 +91,7 @@ export default function DashboardPage() {
         <StatCard
           label={t('dashboard.balance')}
           value={formatQuota(user?.quota ?? 0, quotaPerUnit)}
-          hint={`≈ ${formatNumber(Math.round(quotaToAmount(user?.quota ?? 0, quotaPerUnit) * 100) / 100)} USD`}
+          hint={`${formatNumber(user?.quota ?? 0)} quota`}
           icon={<Coins size={16} />}
           tone="primary"
         />

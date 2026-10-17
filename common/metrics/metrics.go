@@ -149,7 +149,7 @@ func RenderPrometheus() string {
 	writeHelp("ltzy_relay_requests_total", "中继请求总数")
 	writeHelp("ltzy_relay_success_total", "中继成功总数")
 	writeHelp("ltzy_relay_fail_total", "中继失败总数")
-	writeHelp("ltzy_relay_quota_total", "中继累计消耗额度（1 USD = 500000 额度）")
+	writeHelp("ltzy_relay_quota_total", "中继累计消耗额度（1 元 = 1000000 额度）")
 	snapshot := SnapshotRelay()
 	ids := make([]int, 0, len(snapshot))
 	for id := range snapshot {

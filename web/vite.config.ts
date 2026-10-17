@@ -9,6 +9,7 @@ const nm = (...p: string[]) => path.join(root, 'node_modules', ...p);
 
 // LTZY-API 前端构建配置
 // 产物输出到 web/build/default，由 Go 的 //go:embed web/build/* 打进二进制。
+// 注意：本机项目路径含中文，构建需在英文路径镜像 E:\code2 下执行。
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {

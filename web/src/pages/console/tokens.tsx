@@ -296,7 +296,7 @@ export default function TokensPage() {
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
           </div>
-          <Field label={t('token.quota')} hint={`quota，1 USD = ${quotaPerUnit}`}>
+          <Field label={t('token.quota')} hint={`quota，1 元 = ${quotaPerUnit}`}>
             <Input
               type="number"
               value={form.remain_quota}

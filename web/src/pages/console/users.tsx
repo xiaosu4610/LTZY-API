@@ -252,7 +252,7 @@ export default function UsersPage() {
             <Input value={form.group} onChange={(e) => setForm({ ...form, group: e.target.value })} />
           </Field>
           <div className="sm:col-span-2">
-            <Field label={t('user.quota')} hint={`1 USD = ${quotaPerUnit} quota`}>
+            <Field label={t('user.quota')} hint={`1 元 = ${quotaPerUnit} quota`}>
               <Input type="number" value={form.quota} onChange={(e) => setForm({ ...form, quota: e.target.value })} />
             </Field>
           </div>

@@ -252,7 +252,7 @@ export default {
     homePageContent: 'Home page content',
     theme: 'Theme',
     billing: 'Billing',
-    quotaPerUnit: 'Quota per USD',
+    quotaPerUnit: 'Quota per CNY',
     retryTimes: 'Retry times',
     notifications: 'Notifications',
     security: 'Security & limits',

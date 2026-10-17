@@ -186,7 +186,7 @@ export function Topbar() {
 
       <div className="flex items-center gap-1.5">
         <span className="mr-1 hidden rounded-md border border-[var(--ltzy-border)] px-2 py-1 font-mono text-xs sm:inline">
-          ${((user.quota || 0) / quotaPerUnit).toFixed(4)}
+          ¥{((user.quota || 0) / quotaPerUnit).toFixed(4)}
         </span>
         <Button
           variant="ghost"

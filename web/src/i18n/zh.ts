@@ -252,7 +252,7 @@ export default {
     homePageContent: '首页内容',
     theme: '主题',
     billing: '计费与额度',
-    quotaPerUnit: '每美元额度',
+    quotaPerUnit: '每元额度',
     retryTimes: '失败重试次数',
     notifications: '通知渠道',
     security: '安全与限流',

@@ -18,7 +18,9 @@ var Footer = ""
 var Logo = ""
 var TopUpLink = ""
 var ChatLink = ""
-var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
+// QuotaPerUnit 表示「1 个货币单位等于多少 quota」。
+// LTZY-API 统一按人民币计价：1 元 = 1,000,000 quota（与原系统口径一致，便于迁移）。
+var QuotaPerUnit = 1000 * 1000.0
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
 
@@ -118,9 +120,8 @@ var GeminiSafetySetting = env.String("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
 
 var Theme = env.String("THEME", "default")
 var ValidThemes = map[string]bool{
+	// LTZY-API 起前端收敛为单一现代化工程，产物目录固定为 web/build/default
 	"default": true,
-	"berry":   true,
-	"air":     true,
 }
 
 // All duration's unit is seconds

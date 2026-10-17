@@ -18,6 +18,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/model"
+	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
 	"github.com/xiaosu4610/LTZY-API/relay/midjourney"
 )
 
@@ -218,9 +219,10 @@ func TestSubmitMidjourneyTaskSucceeds(t *testing.T) {
 	if data["upstream_task_id"] != "up-1" {
 		t.Fatalf("响应未回传上游任务号：%+v", data)
 	}
-	// 默认倍率 1.0 × 默认分组 1.0 × 单位额度 1000
-	if quota, ok := data["quota"].(float64); !ok || quota != midjourneyQuotaUnit {
-		t.Fatalf("响应额度应为 %d，实际 %+v", midjourneyQuotaUnit, data["quota"])
+	// 默认倍率 1.0 × 默认分组 1.0 × 单位额度 1000 × 货币换算系数
+	wantQuota := expectedMidjourneyQuota()
+	if quota, ok := data["quota"].(float64); !ok || int64(quota) != wantQuota {
+		t.Fatalf("响应额度应为 %d，实际 %+v", wantQuota, data["quota"])
 	}
 
 	tasks, total, err := model.GetMidjourneyTasksByUserId(1, 0, 0, 10)
@@ -231,12 +233,12 @@ func TestSubmitMidjourneyTaskSucceeds(t *testing.T) {
 	if task.TaskId != "up-1" || task.Status != model.MidjourneyStatusSubmitted || task.UserId != 1 {
 		t.Fatalf("任务记录字段错误：%+v", task)
 	}
-	if task.Quota != midjourneyQuotaUnit {
+	if task.Quota != wantQuota {
 		t.Fatalf("任务应记录本次扣费额度，实际 %d", task.Quota)
 	}
 
-	if quota := userQuotaOf(t, 1); quota != 100000-midjourneyQuotaUnit {
-		t.Fatalf("应按次扣费 %d，当前额度 %d", midjourneyQuotaUnit, quota)
+	if quota := userQuotaOf(t, 1); quota != 100000-wantQuota {
+		t.Fatalf("应按次扣费 %d，当前额度 %d", wantQuota, quota)
 	}
 	if logs := countConsumeLogs(t, 1); logs != 1 {
 		t.Fatalf("应记 1 条消费流水，实际 %d", logs)
@@ -245,13 +247,18 @@ func TestSubmitMidjourneyTaskSucceeds(t *testing.T) {
 	if err := model.LOG_DB.Where("user_id = ? AND type = ?", 1, model.LogTypeConsume).First(&consumeLog).Error; err != nil {
 		t.Fatalf("读取消费流水失败：%v", err)
 	}
-	if consumeLog.ModelName != "mj_imagine" || consumeLog.Quota != midjourneyQuotaUnit {
+	if consumeLog.ModelName != "mj_imagine" || consumeLog.Quota != int(wantQuota) {
 		t.Fatalf("消费流水内容错误：%+v", consumeLog)
 	}
 	// 预算计数（B6）也要累加，否则日/月预算熔断对 MJ 消费失效
-	if _, monthly, err := model.GetBudgetUsages(model.BudgetSubjectUser, 1, time.Now()); err != nil || monthly != midjourneyQuotaUnit {
-		t.Fatalf("预算计数应为 %d，实际 %d（err=%v）", midjourneyQuotaUnit, monthly, err)
+	if _, monthly, err := model.GetBudgetUsages(model.BudgetSubjectUser, 1, time.Now()); err != nil || monthly != wantQuota {
+		t.Fatalf("预算计数应为 %d，实际 %d（err=%v）", wantQuota, monthly, err)
 	}
+}
+
+// expectedMidjourneyQuota 单次 MJ 任务的预期额度：单位额度 × 货币换算系数。
+func expectedMidjourneyQuota() int64 {
+	return int64(float64(midjourneyQuotaUnit) * billingratio.RatioScale())
 }
 
 // TestSubmitMidjourneyTaskRefundsOnUpstreamFailure 上游拒收：退款、任务记为失败、不记消费流水。

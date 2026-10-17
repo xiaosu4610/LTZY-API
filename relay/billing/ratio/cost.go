@@ -123,7 +123,9 @@ func CalcCostQuota(modelName string, promptTokens int, completionTokens int) int
 		return 0
 	}
 	completionRatio := GetCompletionRatio(modelName, 0)
-	cost := (float64(promptTokens) + float64(completionTokens)*completionRatio) * costRatio
+	// 与售价同一货币口径：成本倍率同样是美元基准，需与 CalcQuota 乘同一个换算系数，
+	// 否则「收入 − 成本」会拿两个不同口径的数字相减，毛利统计彻底失真。
+	cost := (float64(promptTokens) + float64(completionTokens)*completionRatio) * costRatio * RatioScale()
 	if math.IsNaN(cost) || math.IsInf(cost, 0) || cost <= 0 {
 		return 0
 	}
