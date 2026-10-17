@@ -102,7 +102,7 @@ func SendEmailVerification(c *gin.Context) {
 		if !allowed {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "管理员启用了邮箱域名白名单，您的邮箱地址的域名不在白名单中",
+				"message": i18n.Translate(c, "email.domain_not_allowed"),
 			})
 			return
 		}
@@ -110,7 +110,7 @@ func SendEmailVerification(c *gin.Context) {
 	if model.IsEmailAlreadyTaken(email) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "邮箱地址已被占用",
+			"message": i18n.Translate(c, "email.already_taken"),
 		})
 		return
 	}
@@ -154,7 +154,7 @@ func SendPasswordResetEmail(c *gin.Context) {
 	if !model.IsEmailAlreadyTaken(email) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "该邮箱地址未注册",
+			"message": i18n.Translate(c, "email.not_registered"),
 		})
 		return
 	}
@@ -209,7 +209,7 @@ func ResetPassword(c *gin.Context) {
 	if !common.VerifyCodeWithKey(req.Email, req.Token, common.PasswordResetPurpose) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "重置链接非法或已过期",
+			"message": i18n.Translate(c, "email.reset_link_invalid"),
 		})
 		return
 	}

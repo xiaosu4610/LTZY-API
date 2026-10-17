@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/xiaosu4610/LTZY-API/common/config"
+	"github.com/xiaosu4610/LTZY-API/common/i18n"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
 	"github.com/xiaosu4610/LTZY-API/common/random"
 	"github.com/xiaosu4610/LTZY-API/controller"
@@ -102,7 +103,7 @@ func GitHubOAuth(c *gin.Context) {
 	if !config.GitHubOAuthEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "管理员未开启通过 GitHub 登录以及注册",
+			"message": i18n.Translate(c, "auth.github_disabled"),
 		})
 		return
 	}
@@ -149,7 +150,7 @@ func GitHubOAuth(c *gin.Context) {
 		} else {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "管理员关闭了新用户注册",
+				"message": i18n.Translate(c, "auth.register_disabled"),
 			})
 			return
 		}
@@ -157,7 +158,7 @@ func GitHubOAuth(c *gin.Context) {
 
 	if user.Status != model.UserStatusEnabled {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "用户已被封禁",
+			"message": i18n.Translate(c, "auth.user_banned"),
 			"success": false,
 		})
 		return
@@ -169,7 +170,7 @@ func GitHubBind(c *gin.Context) {
 	if !config.GitHubOAuthEnabled {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "管理员未开启通过 GitHub 登录以及注册",
+			"message": i18n.Translate(c, "auth.github_disabled"),
 		})
 		return
 	}
@@ -188,7 +189,7 @@ func GitHubBind(c *gin.Context) {
 	if model.IsGitHubIdAlreadyTaken(user.GitHubId) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "该 GitHub 账户已被绑定",
+			"message": i18n.Translate(c, "auth.github_already_bound"),
 		})
 		return
 	}

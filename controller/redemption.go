@@ -5,6 +5,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
+	"github.com/xiaosu4610/LTZY-API/common/i18n"
 	"github.com/xiaosu4610/LTZY-API/common/random"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"net/http"
@@ -88,21 +89,21 @@ func AddRedemption(c *gin.Context) {
 	if len(redemption.Name) == 0 || len(redemption.Name) > 20 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "兑换码名称长度必须在1-20之间",
+			"message": i18n.Translate(c, "redemption.name_length_invalid"),
 		})
 		return
 	}
 	if redemption.Count <= 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "兑换码个数必须大于0",
+			"message": i18n.Translate(c, "redemption.count_invalid"),
 		})
 		return
 	}
 	if redemption.Count > 100 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "一次兑换码批量生成的个数不能大于 100",
+			"message": i18n.Translate(c, "redemption.batch_limit_exceeded"),
 		})
 		return
 	}

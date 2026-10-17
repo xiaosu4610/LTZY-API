@@ -26,7 +26,7 @@ type LoginRequest struct {
 func Login(c *gin.Context) {
 	if !config.PasswordLoginEnabled {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "管理员关闭了密码登录",
+			"message": i18n.Translate(c, "user.password_login_disabled"),
 			"success": false,
 		})
 		return
@@ -74,7 +74,7 @@ func SetupLogin(user *model.User, c *gin.Context) {
 	err := session.Save()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "无法保存会话信息，请重试",
+			"message": i18n.Translate(c, "user.session_save_failed"),
 			"success": false,
 		})
 		return
@@ -114,14 +114,14 @@ func Register(c *gin.Context) {
 	ctx := c.Request.Context()
 	if !config.RegisterEnabled {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "管理员关闭了新用户注册",
+			"message": i18n.Translate(c, "auth.register_disabled"),
 			"success": false,
 		})
 		return
 	}
 	if !config.PasswordRegisterEnabled {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "管理员关闭了通过密码进行注册，请使用第三方账户验证的形式进行注册",
+			"message": i18n.Translate(c, "user.password_register_disabled"),
 			"success": false,
 		})
 		return
@@ -146,14 +146,14 @@ func Register(c *gin.Context) {
 		if user.Email == "" || user.VerificationCode == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "管理员开启了邮箱验证，请输入邮箱地址和验证码",
+				"message": i18n.Translate(c, "user.email_verification_required"),
 			})
 			return
 		}
 		if !common.VerifyCodeWithKey(user.Email, user.VerificationCode, common.EmailVerificationPurpose) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "验证码错误或已过期",
+				"message": i18n.Translate(c, "user.verification_code_invalid"),
 			})
 			return
 		}
@@ -247,7 +247,7 @@ func GetUser(c *gin.Context) {
 	if myRole <= user.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无权获取同级或更高等级用户的信息",
+			"message": i18n.Translate(c, "user.cannot_view_higher_privilege"),
 		})
 		return
 	}
@@ -269,7 +269,7 @@ func GetUserDashboard(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无法获取统计信息",
+			"message": i18n.Translate(c, "user.stats_unavailable"),
 			"data":    nil,
 		})
 		return
@@ -297,7 +297,7 @@ func GenerateAccessToken(c *gin.Context) {
 	if model.DB.Where("access_token = ?", user.AccessToken).First(user).RowsAffected != 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "请重试，系统生成的 UUID 竟然重复了！",
+			"message": i18n.Translate(c, "user.uuid_duplicated"),
 		})
 		return
 	}
@@ -397,14 +397,14 @@ func UpdateUser(c *gin.Context) {
 	if myRole <= originUser.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无权更新同权限等级或更高权限等级的用户信息",
+			"message": i18n.Translate(c, "user.cannot_update_higher_privilege"),
 		})
 		return
 	}
 	if myRole <= updatedUser.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无权将其他用户权限等级提升到大于等于自己的权限等级",
+			"message": i18n.Translate(c, "user.cannot_escalate_privilege"),
 		})
 		return
 	}
@@ -445,7 +445,7 @@ func UpdateSelf(c *gin.Context) {
 	if err := common.Validate.Struct(&user); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "输入不合法 " + err.Error(),
+			"message": i18n.Translatef(c, "user.invalid_input_detail", err.Error()),
 		})
 		return
 	}
@@ -497,7 +497,7 @@ func DeleteUser(c *gin.Context) {
 	if myRole <= originUser.Role {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无权删除同权限等级或更高权限等级的用户",
+			"message": i18n.Translate(c, "user.cannot_delete_higher_privilege"),
 		})
 		return
 	}
@@ -518,7 +518,7 @@ func DeleteSelf(c *gin.Context) {
 	if user.Role == model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "不能删除超级管理员账户",
+			"message": i18n.Translate(c, "user.cannot_delete_self_root"),
 		})
 		return
 	}
@@ -563,7 +563,7 @@ func CreateUser(c *gin.Context) {
 	if user.Role >= myRole {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无法创建权限大于等于自己的用户",
+			"message": i18n.Translate(c, "user.cannot_create_higher_privilege"),
 		})
 		return
 	}
@@ -613,7 +613,7 @@ func ManageUser(c *gin.Context) {
 	if user.Id == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "用户不存在",
+			"message": i18n.Translate(c, "user.not_found"),
 		})
 		return
 	}
@@ -621,7 +621,7 @@ func ManageUser(c *gin.Context) {
 	if myRole <= user.Role && myRole != model.RoleRootUser {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "无权更新同权限等级或更高权限等级的用户信息",
+			"message": i18n.Translate(c, "user.cannot_update_higher_privilege"),
 		})
 		return
 	}
@@ -631,7 +631,7 @@ func ManageUser(c *gin.Context) {
 		if user.Role == model.RoleRootUser {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法禁用超级管理员用户",
+				"message": i18n.Translate(c, "user.cannot_disable_root"),
 			})
 			return
 		}
@@ -641,7 +641,7 @@ func ManageUser(c *gin.Context) {
 		if user.Role == model.RoleRootUser {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法删除超级管理员用户",
+				"message": i18n.Translate(c, "user.cannot_delete_root"),
 			})
 			return
 		}
@@ -656,14 +656,14 @@ func ManageUser(c *gin.Context) {
 		if myRole != model.RoleRootUser {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "普通管理员用户无法提升其他用户为管理员",
+				"message": i18n.Translate(c, "user.admin_cannot_promote"),
 			})
 			return
 		}
 		if user.Role >= model.RoleAdminUser {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "该用户已经是管理员",
+				"message": i18n.Translate(c, "user.already_admin"),
 			})
 			return
 		}
@@ -672,14 +672,14 @@ func ManageUser(c *gin.Context) {
 		if user.Role == model.RoleRootUser {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "无法降级超级管理员用户",
+				"message": i18n.Translate(c, "user.cannot_demote_root"),
 			})
 			return
 		}
 		if user.Role == model.RoleCommonUser {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "该用户已经是普通用户",
+				"message": i18n.Translate(c, "user.already_common_user"),
 			})
 			return
 		}
@@ -711,7 +711,7 @@ func EmailBind(c *gin.Context) {
 	if !common.VerifyCodeWithKey(email, code, common.EmailVerificationPurpose) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "验证码错误或已过期",
+			"message": i18n.Translate(c, "user.verification_code_invalid"),
 		})
 		return
 	}

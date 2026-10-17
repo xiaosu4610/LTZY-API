@@ -1,5 +1,66 @@
 {
+  "common.unknown_error": "系统繁忙，请稍后重试",
+
+  "invalid_parameter": "无效的参数",
   "invalid_input": "无效的输入，请检查您的输入",
   "send_email_failed": "发送邮件失败：",
-  "invalid_parameter": "无效的参数"
+
+  "user.password_login_disabled": "管理员关闭了密码登录",
+  "user.session_save_failed": "无法保存会话信息，请重试",
+  "user.password_register_disabled": "管理员关闭了通过密码进行注册，请使用第三方账户验证的形式进行注册",
+  "user.email_verification_required": "管理员开启了邮箱验证，请输入邮箱地址和验证码",
+  "user.verification_code_invalid": "验证码错误或已过期",
+  "user.cannot_view_higher_privilege": "无权获取同级或更高等级用户的信息",
+  "user.stats_unavailable": "无法获取统计信息",
+  "user.uuid_duplicated": "请重试，系统生成的 UUID 竟然重复了！",
+  "user.cannot_update_higher_privilege": "无权更新同权限等级或更高权限等级的用户信息",
+  "user.cannot_escalate_privilege": "无权将其他用户权限等级提升到大于等于自己的权限等级",
+  "user.invalid_input_detail": "输入不合法 %s",
+  "user.cannot_delete_higher_privilege": "无权删除同权限等级或更高权限等级的用户",
+  "user.cannot_delete_self_root": "不能删除超级管理员账户",
+  "user.cannot_create_higher_privilege": "无法创建权限大于等于自己的用户",
+  "user.not_found": "用户不存在",
+  "user.cannot_disable_root": "无法禁用超级管理员用户",
+  "user.cannot_delete_root": "无法删除超级管理员用户",
+  "user.admin_cannot_promote": "普通管理员用户无法提升其他用户为管理员",
+  "user.already_admin": "该用户已经是管理员",
+  "user.cannot_demote_root": "无法降级超级管理员用户",
+  "user.already_common_user": "该用户已经是普通用户",
+
+  "auth.register_disabled": "管理员关闭了新用户注册",
+  "auth.github_disabled": "管理员未开启通过 GitHub 登录以及注册",
+  "auth.oidc_disabled": "管理员未开启通过 OIDC 登录以及注册",
+  "auth.wechat_disabled": "管理员未开启通过微信登录以及注册",
+  "auth.user_banned": "用户已被封禁",
+  "auth.github_already_bound": "该 GitHub 账户已被绑定",
+  "auth.oidc_already_bound": "该 OIDC 账户已被绑定",
+  "auth.lark_already_bound": "该飞书账户已被绑定",
+  "auth.wechat_already_bound": "该微信账号已被绑定",
+
+  "email.domain_not_allowed": "管理员启用了邮箱域名白名单，您的邮箱地址的域名不在白名单中",
+  "email.already_taken": "邮箱地址已被占用",
+  "email.not_registered": "该邮箱地址未注册",
+  "email.reset_link_invalid": "重置链接非法或已过期",
+
+  "option.invalid_theme": "无效的主题",
+  "option.github_oauth_not_configured": "无法启用 GitHub OAuth，请先填入 GitHub Client Id 以及 GitHub Client Secret！",
+  "option.email_domain_not_configured": "无法启用邮箱域名限制，请先填入限制的邮箱域名！",
+  "option.wechat_not_configured": "无法启用微信登录，请先填入微信登录相关配置信息！",
+  "option.turnstile_not_configured": "无法启用 Turnstile 校验，请先填入 Turnstile 校验相关配置信息！",
+
+  "redemption.name_length_invalid": "兑换码名称长度必须在1-20之间",
+  "redemption.count_invalid": "兑换码个数必须大于0",
+  "redemption.batch_limit_exceeded": "一次兑换码批量生成的个数不能大于 100",
+
+  "token.name_too_long": "令牌名称过长",
+  "token.invalid_subnet": "无效的网段：%s",
+  "token.rate_limit_negative": "限速值不能为负数",
+  "token.concurrency_negative": "并发上限不能为负数",
+  "token.budget_negative": "预算上限不能为负数",
+  "token.invalid_allowed_modes": "无效的接口范围：%s（可选值：%s）",
+  "token.invalid_params": "参数错误：%s",
+  "token.expired_cannot_enable": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
+  "token.quota_exhausted_cannot_enable": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
+
+  "relay.upstream_overloaded": "当前分组上游负载已饱和，请稍后再试"
 }

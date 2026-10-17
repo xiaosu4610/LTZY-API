@@ -1,5 +1,66 @@
 {
+  "common.unknown_error": "The system is busy, please try again later",
+
+  "invalid_parameter": "invalid parameter",
   "invalid_input": "Invalid input, please check your input",
   "send_email_failed": "failed to send email: ",
-  "invalid_parameter": "invalid parameter"
+
+  "user.password_login_disabled": "Password login has been disabled by the administrator",
+  "user.session_save_failed": "Failed to save the session, please try again",
+  "user.password_register_disabled": "Password registration has been disabled by the administrator, please register with a third-party account",
+  "user.email_verification_required": "Email verification is enabled, please enter your email address and verification code",
+  "user.verification_code_invalid": "The verification code is incorrect or has expired",
+  "user.cannot_view_higher_privilege": "You are not allowed to view users with the same or a higher privilege level",
+  "user.stats_unavailable": "Failed to get statistics",
+  "user.uuid_duplicated": "Please try again, the generated UUID was duplicated!",
+  "user.cannot_update_higher_privilege": "You are not allowed to update users with the same or a higher privilege level",
+  "user.cannot_escalate_privilege": "You are not allowed to raise other users to your privilege level or higher",
+  "user.invalid_input_detail": "Invalid input %s",
+  "user.cannot_delete_higher_privilege": "You are not allowed to delete users with the same or a higher privilege level",
+  "user.cannot_delete_self_root": "The root administrator account cannot be deleted",
+  "user.cannot_create_higher_privilege": "You cannot create a user whose privilege level is equal to or higher than your own",
+  "user.not_found": "User not found",
+  "user.cannot_disable_root": "The root administrator cannot be disabled",
+  "user.cannot_delete_root": "The root administrator cannot be deleted",
+  "user.admin_cannot_promote": "A regular administrator cannot promote other users to administrator",
+  "user.already_admin": "This user is already an administrator",
+  "user.cannot_demote_root": "The root administrator cannot be demoted",
+  "user.already_common_user": "This user is already a regular user",
+
+  "auth.register_disabled": "New user registration has been disabled by the administrator",
+  "auth.github_disabled": "GitHub login and registration have not been enabled by the administrator",
+  "auth.oidc_disabled": "OIDC login and registration have not been enabled by the administrator",
+  "auth.wechat_disabled": "WeChat login and registration have not been enabled by the administrator",
+  "auth.user_banned": "This user has been banned",
+  "auth.github_already_bound": "This GitHub account has already been bound",
+  "auth.oidc_already_bound": "This OIDC account has already been bound",
+  "auth.lark_already_bound": "This Lark account has already been bound",
+  "auth.wechat_already_bound": "This WeChat account has already been bound",
+
+  "email.domain_not_allowed": "The email domain whitelist is enabled, and the domain of your email address is not in the whitelist",
+  "email.already_taken": "This email address is already taken",
+  "email.not_registered": "This email address is not registered",
+  "email.reset_link_invalid": "The reset link is invalid or has expired",
+
+  "option.invalid_theme": "Invalid theme",
+  "option.github_oauth_not_configured": "GitHub OAuth cannot be enabled until the GitHub Client Id and GitHub Client Secret are filled in!",
+  "option.email_domain_not_configured": "Email domain restriction cannot be enabled until the allowed email domains are filled in!",
+  "option.wechat_not_configured": "WeChat login cannot be enabled until the related WeChat configuration is filled in!",
+  "option.turnstile_not_configured": "Turnstile verification cannot be enabled until the related Turnstile configuration is filled in!",
+
+  "redemption.name_length_invalid": "The redemption code name must be between 1 and 20 characters long",
+  "redemption.count_invalid": "The number of redemption codes must be greater than 0",
+  "redemption.batch_limit_exceeded": "You cannot generate more than 100 redemption codes at a time",
+
+  "token.name_too_long": "The token name is too long",
+  "token.invalid_subnet": "Invalid subnet: %s",
+  "token.rate_limit_negative": "The rate limit cannot be negative",
+  "token.concurrency_negative": "The concurrency limit cannot be negative",
+  "token.budget_negative": "The budget limit cannot be negative",
+  "token.invalid_allowed_modes": "Invalid API scope: %s (available values: %s)",
+  "token.invalid_params": "Invalid parameters: %s",
+  "token.expired_cannot_enable": "The token has expired and cannot be enabled. Please change its expiration time or set it to never expire",
+  "token.quota_exhausted_cannot_enable": "The token quota has been used up and cannot be enabled. Please change the remaining quota or set it to unlimited",
+
+  "relay.upstream_overloaded": "The upstream of the current group is overloaded, please try again later"
 }

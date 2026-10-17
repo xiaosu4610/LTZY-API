@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,6 +11,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
+	"github.com/xiaosu4610/LTZY-API/common/i18n"
 	"github.com/xiaosu4610/LTZY-API/common/network"
 	"github.com/xiaosu4610/LTZY-API/common/random"
 	"github.com/xiaosu4610/LTZY-API/model"
@@ -113,22 +114,22 @@ func GetTokenStatus(c *gin.Context) {
 
 func validateToken(c *gin.Context, token model.Token) error {
 	if len(token.Name) > 30 {
-		return fmt.Errorf("令牌名称过长")
+		return errors.New(i18n.Translate(c, "token.name_too_long"))
 	}
 	if token.Subnet != nil && *token.Subnet != "" {
 		err := network.IsValidSubnets(*token.Subnet)
 		if err != nil {
-			return fmt.Errorf("无效的网段：%s", err.Error())
+			return errors.New(i18n.Translatef(c, "token.invalid_subnet", err.Error()))
 		}
 	}
 	if token.Rpm < 0 || token.Tpm < 0 {
-		return fmt.Errorf("限速值不能为负数")
+		return errors.New(i18n.Translate(c, "token.rate_limit_negative"))
 	}
 	if token.Concurrency < 0 {
-		return fmt.Errorf("并发上限不能为负数")
+		return errors.New(i18n.Translate(c, "token.concurrency_negative"))
 	}
 	if token.DailyQuotaLimit < 0 || token.MonthlyQuotaLimit < 0 {
-		return fmt.Errorf("预算上限不能为负数")
+		return errors.New(i18n.Translate(c, "token.budget_negative"))
 	}
 	// 接口 scope 校验（LTZY-API 新增，C3）：逐个校验模式名，
 	// 避免写错一个词就让令牌实际可用范围与管理员预期不符
@@ -139,7 +140,7 @@ func validateToken(c *gin.Context, token model.Token) error {
 				continue
 			}
 			if !relaymode.IsValidName(modeName) {
-				return fmt.Errorf("无效的接口范围：%s（可选值：%s）", modeName, relaymode.NamesHelp())
+				return errors.New(i18n.Translatef(c, "token.invalid_allowed_modes", modeName, relaymode.NamesHelp()))
 			}
 		}
 	}
@@ -160,7 +161,7 @@ func AddToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("参数错误：%s", err.Error()),
+			"message": i18n.Translatef(c, "token.invalid_params", err.Error()),
 		})
 		return
 	}
@@ -237,7 +238,7 @@ func UpdateToken(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("参数错误：%s", err.Error()),
+			"message": i18n.Translatef(c, "token.invalid_params", err.Error()),
 		})
 		return
 	}
@@ -253,14 +254,14 @@ func UpdateToken(c *gin.Context) {
 		if cleanToken.Status == model.TokenStatusExpired && cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
+				"message": i18n.Translate(c, "token.expired_cannot_enable"),
 			})
 			return
 		}
 		if cleanToken.Status == model.TokenStatusExhausted && cleanToken.RemainQuota <= 0 && !cleanToken.UnlimitedQuota {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "令牌可用额度已用尽，无法启用，请先修改令牌剩余额度，或者设置为无限额度",
+				"message": i18n.Translate(c, "token.quota_exhausted_cannot_enable"),
 			})
 			return
 		}

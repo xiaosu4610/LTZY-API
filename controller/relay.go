@@ -12,6 +12,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
+	"github.com/xiaosu4610/LTZY-API/common/i18n"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
 	"github.com/xiaosu4610/LTZY-API/common/metrics"
 	"github.com/xiaosu4610/LTZY-API/middleware"
@@ -106,7 +107,7 @@ func Relay(c *gin.Context) {
 	}
 	if bizErr != nil {
 		if bizErr.StatusCode == http.StatusTooManyRequests {
-			bizErr.Error.Message = "当前分组上游负载已饱和，请稍后再试"
+			bizErr.Error.Message = i18n.Translate(c, "relay.upstream_overloaded")
 		}
 
 		// BUG: bizErr is in race condition
