@@ -98,6 +98,17 @@ func SetApiRouter(router *gin.Engine) {
 			childRoute.PUT("/:id/password", controller.ResetChildPassword)
 			childRoute.DELETE("/:id", controller.DeleteChildAccount)
 		}
+		// 审批流（LTZY-API 新增，C7）：提交申请任何登录用户都能做（提额本就得用户发起），
+		// 查看全部与审批是管理能力，单独挂权限点。
+		approvalRoute := apiRouter.Group("/approval")
+		approvalRoute.Use(middleware.UserAuth())
+		{
+			approvalRoute.POST("/", controller.CreateApproval)
+			approvalRoute.GET("/self", controller.GetMyApprovals)
+			approvalRoute.GET("/", middleware.PermissionAuth(model.PermUserRead), controller.GetApprovals)
+			approvalRoute.POST("/:id/approve", middleware.PermissionAuth(model.PermUserWrite), controller.ApproveApproval)
+			approvalRoute.POST("/:id/reject", middleware.PermissionAuth(model.PermUserWrite), controller.RejectApproval)
+		}
 		// 租户管理（LTZY-API 新增，C5）：创建租户与变更归属会直接改变数据可见范围，
 		// 属最高危操作，与系统设置同级，仅 root 可用。
 		tenantRoute := apiRouter.Group("/tenant")

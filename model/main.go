@@ -177,6 +177,10 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&OptionHistory{}); err != nil {
 		return err
 	}
+	// 审批表（LTZY-API 新增，C7）：充值/提额的申请与审批留痕
+	if err = DB.AutoMigrate(&Approval{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}
