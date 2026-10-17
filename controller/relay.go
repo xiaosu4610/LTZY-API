@@ -38,6 +38,8 @@ func relayHelper(c *gin.Context, relayMode int) *model.ErrorWithStatusCode {
 		err = controller.RelayProxyHelper(c, relayMode)
 	case relaymode.Rerank:
 		err = controller.RelayRerankHelper(c)
+	case relaymode.Responses:
+		err = controller.RelayResponsesHelper(c)
 	default:
 		err = controller.RelayTextHelper(c)
 	}
