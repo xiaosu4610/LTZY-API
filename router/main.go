@@ -20,6 +20,8 @@ func SetRouter(router *gin.Engine, buildFS embed.FS) {
 	// 保证探针在任何中间件异常时仍可探测到进程本身
 	router.GET("/healthz", controller.Healthz)
 	router.GET("/readyz", controller.Readyz)
+	// Prometheus 抓取端点（LTZY-API 新增，D3）
+	router.GET("/metrics", controller.Metrics)
 	frontendBaseUrl := os.Getenv("FRONTEND_BASE_URL")
 	if config.IsMasterNode && frontendBaseUrl != "" {
 		frontendBaseUrl = ""

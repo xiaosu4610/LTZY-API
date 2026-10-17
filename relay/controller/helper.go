@@ -15,6 +15,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
+	"github.com/xiaosu4610/LTZY-API/common/metrics"
 	"github.com/xiaosu4610/LTZY-API/middleware"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
@@ -158,6 +159,8 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	})
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+	// 累计到运行指标，供 /metrics 抓取（LTZY-API 新增，D3）
+	metrics.RecordRelayQuota(meta.ChannelId, quota)
 	// 记录令牌本分钟 token 消耗（LTZY-API 新增，用于 TPM 统计/告警）
 	middleware.RecordTokenTPM(meta.TokenId, tokenTpm, totalTokens)
 }

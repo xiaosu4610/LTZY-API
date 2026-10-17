@@ -13,6 +13,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
+	"github.com/xiaosu4610/LTZY-API/common/metrics"
 	"github.com/xiaosu4610/LTZY-API/middleware"
 	dbmodel "github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/monitor"
@@ -60,8 +61,11 @@ func Relay(c *gin.Context) {
 	bizErr := relayHelper(c, relayMode)
 	if bizErr == nil {
 		monitor.Emit(channelId, true)
+		metrics.RecordRelay(channelId, true)
 		return
 	}
+	metrics.RecordRelay(channelId, false)
+	metrics.SetRelayLastFail(channelId, bizErr.Error.Message)
 	lastFailedChannelId := channelId
 	channelName := c.GetString(ctxkey.ChannelName)
 	group := c.GetString(ctxkey.Group)
@@ -88,8 +92,13 @@ func Relay(c *gin.Context) {
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 		bizErr = relayHelper(c, relayMode)
 		if bizErr == nil {
+			monitor.Emit(c.GetInt(ctxkey.ChannelId), true)
+			metrics.RecordRelay(c.GetInt(ctxkey.ChannelId), true)
 			return
 		}
+		retryChannelId := c.GetInt(ctxkey.ChannelId)
+		metrics.RecordRelay(retryChannelId, false)
+		metrics.SetRelayLastFail(retryChannelId, bizErr.Error.Message)
 		channelId := c.GetInt(ctxkey.ChannelId)
 		lastFailedChannelId = channelId
 		channelName := c.GetString(ctxkey.ChannelName)
