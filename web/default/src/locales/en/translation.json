@@ -211,7 +211,12 @@
         "rerank": "Rerank",
         "responses": "Responses",
         "videos": "Video Generation",
-        "proxy": "Generic Proxy"
+        "proxy": "Generic Proxy",
+        "files": "Files",
+        "fine_tuning": "Fine-tuning",
+        "assistants": "Assistants",
+        "threads": "Threads",
+        "models": "Model management"
       },
       "rpm": "Requests Per Minute Limit (RPM, 0 = unlimited)",
       "rpm_placeholder": "e.g. 60",

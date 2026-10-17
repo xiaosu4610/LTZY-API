@@ -48,6 +48,17 @@ const ALLOWED_MODE_OPTIONS = [
   { key: 'responses', labelKey: 'token.edit.modes.responses', endpoint: '/v1/responses', value: 'responses' },
   { key: 'videos', labelKey: 'token.edit.modes.videos', endpoint: '/v1/videos', value: 'videos' },
   { key: 'proxy', labelKey: 'token.edit.modes.proxy', endpoint: '/v1/oneapi/proxy', value: 'proxy' },
+  // A6 起这些端点已从 501 占位变为可用的透传中继，因此也纳入 scope 可选项
+  { key: 'files', labelKey: 'token.edit.modes.files', endpoint: '/v1/files', value: 'files' },
+  {
+    key: 'fine_tuning',
+    labelKey: 'token.edit.modes.fine_tuning',
+    endpoint: '/v1/fine_tuning/jobs',
+    value: 'fine_tuning',
+  },
+  { key: 'assistants', labelKey: 'token.edit.modes.assistants', endpoint: '/v1/assistants', value: 'assistants' },
+  { key: 'threads', labelKey: 'token.edit.modes.threads', endpoint: '/v1/threads', value: 'threads' },
+  { key: 'models', labelKey: 'token.edit.modes.models', endpoint: '/v1/models/{model}', value: 'models' },
 ];
 
 const EditToken = () => {

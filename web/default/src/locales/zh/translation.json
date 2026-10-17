@@ -211,7 +211,12 @@
         "rerank": "重排",
         "responses": "Responses",
         "videos": "视频生成",
-        "proxy": "通用代理"
+        "proxy": "通用代理",
+        "files": "文件",
+        "fine_tuning": "微调任务",
+        "assistants": "助手",
+        "threads": "会话线程",
+        "models": "模型管理"
       },
       "rpm": "每分钟请求数上限（RPM，0 表示不限）",
       "rpm_placeholder": "例如 60",

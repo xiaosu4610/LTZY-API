@@ -21,6 +21,12 @@ var modeNames = map[int]string{
 	Responses:          "responses",
 	Videos:             "videos",
 	Proxy:              "proxy",
+	// A6 透传端点家族（LTZY-API 新增）。令牌 scope 配置里用这些名字放行/拦截。
+	Files:      "files",
+	FineTuning: "fine_tuning",
+	Assistants: "assistants",
+	Threads:    "threads",
+	Models:     "models",
 }
 
 // ModeName2Mode 反查表，用于校验管理员填写的中继模式名是否合法。

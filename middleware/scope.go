@@ -41,8 +41,10 @@ func TokenScope() gin.HandlerFunc {
 
 		mode := relaymode.GetByPath(c.Request.URL.Path)
 		if relaymode.Name(mode) == "" {
-			// 未知路径（例如 /v1/files 这类占位端点）：交给后续处理器按 501 处理，
-			// 不在这里拦，避免把「未实现」误报成「无权限」
+			// 未知路径（例如仍是 501 占位的 /v1/images/edits）：交给后续处理器决定，
+			// 不在这里拦，避免把「未实现」误报成「无权限」。
+			// 注意：/v1/files、/v1/assistants、/v1/threads、/v1/fine_tuning、
+			// /v1/models/{model} 自 A6 起已是受 scope 约束的正常中继模式，不再走这一分支。
 			c.Next()
 			return
 		}

@@ -44,6 +44,10 @@ func relayHelper(c *gin.Context, relayMode int) *model.ErrorWithStatusCode {
 		err = controller.RelayResponsesHelper(c)
 	case relaymode.Videos:
 		err = controller.RelayVideoHelper(c)
+	// A6：files / fine_tuning / assistants / threads / 删除微调模型这批端点没有
+	// 各自的适配逻辑，统一走「原样透传」控制器（计费口径见该文件注释）。
+	case relaymode.Files, relaymode.FineTuning, relaymode.Assistants, relaymode.Threads, relaymode.Models:
+		err = controller.RelayPassthroughHelper(c, relayMode)
 	default:
 		err = controller.RelayTextHelper(c)
 	}
@@ -61,6 +65,16 @@ func Relay(c *gin.Context) {
 	userId := c.GetInt(ctxkey.Id)
 	bizErr := relayHelper(c, relayMode)
 	if bizErr == nil {
+		// A6：透传端点必须把上游错误原样回传，因此 relayHelper 只能返回 nil；
+		// 但 nil 会被当成「成功」，上游 401/5xx 就永远进不了渠道健康统计。
+		// 这里根据上下文里的标记补记一次渠道失败（日志、自动禁用、指标口径
+		// 与其它端点保持一致），响应本身早已原样写出，不做任何改写。
+		if upstreamErr := controller.PassthroughUpstreamError(c); upstreamErr != nil {
+			metrics.RecordRelay(channelId, false)
+			metrics.SetRelayLastFail(channelId, upstreamErr.Error.Message)
+			go processChannelRelayError(ctx, userId, channelId, c.GetString(ctxkey.ChannelName), *upstreamErr)
+			return
+		}
 		monitor.Emit(channelId, true)
 		metrics.RecordRelay(channelId, true)
 		return
