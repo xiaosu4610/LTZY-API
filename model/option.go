@@ -76,6 +76,10 @@ func InitOptionMap() {
 	config.OptionMap["ModelGroupRatio"] = billingratio.ModelGroupRatio2JSONString()
 	// 上游成本倍率（LTZY-API 新增，B7）：JSON 如 {"gpt-4o":1.6,"*":2.0}
 	config.OptionMap["CostRatio"] = billingratio.CostRatio2JSONString()
+	// 内容审核敏感词（LTZY-API 新增，E3）：逗号/换行分隔；为空即关闭审核
+	config.OptionMap["SensitiveWords"] = ""
+	// 命中动作：block（默认，直接拒绝）或 log（只记日志，用于上线前观察误伤率）
+	config.OptionMap["SensitiveWordsAction"] = "block"
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
 	config.OptionMap["TieredRatio"] = ""
