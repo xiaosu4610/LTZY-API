@@ -53,11 +53,31 @@ var ChannelBaseURLs = []string{
 	"https://dashscope.aliyuncs.com",            // 49
 	"",                                          // 50
 
-	"https://generativelanguage.googleapis.com/v1beta/openai/", // 51
+	"https://generativelanguage.googleapis.com/v1beta/openai/", // 51 GeminiOpenAICompatible
+	"", // 52 Dummy（测试用，无上游地址）
+
+	// ── LTZY-API 二开新增（A7）：索引必须与 define.go 的常量顺序严格一致，
+	// 否则 init() 会 panic（长度校验），这是有意的防误配保护。
+	"https://api.perplexity.ai",           // 53 Perplexity
+	"https://api.jina.ai",                 // 54 Jina
+	"https://api.voyageai.com",            // 55 VoyageAI
+	"https://api.fireworks.ai/inference",  // 56 Fireworks
+	"https://api.deepinfra.com/v1/openai", // 57 DeepInfra
+	"https://api.hyperbolic.xyz",          // 58 Hyperbolic
+	"https://api.cerebras.ai",             // 59 Cerebras
+	"https://api.sambanova.ai",            // 60 SambaNova
 }
 
+// lastChannelType 必须始终指向 define.go 中**最后一个**渠道类型常量。
+//
+// 原实现校验的是 Dummy（当时它恰好是最后一个），但 A7 新增渠道后
+// Dummy 不再是末尾，这条校验就失效了 —— 现在改为显式维护"最后一个"，
+// 并保留同等强度的保护：新增渠道类型却忘了加 BaseURL 会立刻 panic，
+// 而不是在运行期取到空 URL 再变成"莫名其妙的连接失败"。
+const lastChannelType = SambaNova
+
 func init() {
-	if len(ChannelBaseURLs) != Dummy {
+	if len(ChannelBaseURLs) != lastChannelType+1 {
 		panic("channel base urls length not match")
 	}
 }

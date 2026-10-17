@@ -105,4 +105,62 @@ export const CHANNEL_OPTIONS = [
   { key: 9, text: '代理：AI.LS', value: 9, color: 'yellow' },
   { key: 12, text: '代理：API2GPT', value: 12, color: 'blue' },
   { key: 13, text: '代理：AIGC2D', value: 13, color: 'purple' },
+  // A7 新增渠道（LTZY-API 二开）：都是 OpenAI 兼容，已内置默认 BaseURL，
+  // 管理员建渠道时只需填密钥。value 必须与后端 relay/channeltype/define.go 一致。
+  {
+    key: 53,
+    text: 'Perplexity',
+    value: 53,
+    color: 'teal',
+    description: '带联网检索的问答模型（sonar 系列），OpenAI 兼容',
+  },
+  {
+    key: 54,
+    text: 'Jina',
+    value: 54,
+    color: 'violet',
+    description: '向量嵌入与重排（jina-embeddings / jina-reranker），OpenAI 兼容',
+  },
+  {
+    key: 55,
+    text: 'VoyageAI',
+    value: 55,
+    color: 'blue',
+    description: '高质量嵌入模型（voyage-3 等）',
+  },
+  {
+    key: 56,
+    text: 'Fireworks',
+    value: 56,
+    color: 'orange',
+    description: '托管开源模型推理（Llama/Qwen/DeepSeek 等），OpenAI 兼容',
+  },
+  {
+    key: 57,
+    text: 'DeepInfra',
+    value: 57,
+    color: 'purple',
+    description: '低成本开源模型推理，OpenAI 兼容',
+  },
+  {
+    key: 58,
+    text: 'Hyperbolic',
+    value: 58,
+    color: 'pink',
+    description: '开源模型推理服务，OpenAI 兼容',
+  },
+  {
+    key: 59,
+    text: 'Cerebras',
+    value: 59,
+    color: 'red',
+    description: '极低延迟推理平台，OpenAI 兼容',
+  },
+  {
+    key: 60,
+    text: 'SambaNova',
+    value: 60,
+    color: 'brown',
+    description: '高速推理平台，OpenAI 兼容',
+  },
 ];
