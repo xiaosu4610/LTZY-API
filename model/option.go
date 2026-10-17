@@ -85,6 +85,9 @@ func InitOptionMap() {
 	config.OptionMap["MidjourneyApiKey"] = ""
 	// MJ 任务倍率：支持数字（1.5）或按动作区分（{"imagine":1.5,"upscale":0.5}）
 	config.OptionMap["MidjourneyModelRatio"] = ""
+	// 角色权限表（LTZY-API 新增，C4）：JSON 如 {"admin":["channel.read"],"20":["log.read"]}
+	// 留空 = 使用与改造前完全一致的内置默认值
+	config.OptionMap["RolePermissions"] = ""
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
 	config.OptionMap["TieredRatio"] = ""
@@ -260,6 +263,11 @@ func updateOptionMap(key string, value string) (err error) {
 	case "CostRatio":
 		// 上游成本倍率（B7）：同样在写入前校验，脏数据会让毛利报表失真
 		err = billingratio.UpdateCostRatioByJSONString(value)
+	case "RolePermissions":
+		// 角色权限表（C4）：未知权限点直接拒绝，避免"配了却不生效"的诡异现象
+		if validationErr := ValidateRolePermissionsOption(value); validationErr != nil {
+			err = errors.Join(errors.New("RolePermissions 格式错误"), validationErr)
+		}
 	case "CompletionRatio":
 		err = billingratio.UpdateCompletionRatioByJSONString(value)
 	case "ReasoningRatio":

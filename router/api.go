@@ -4,6 +4,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/controller"
 	"github.com/xiaosu4610/LTZY-API/controller/auth"
 	"github.com/xiaosu4610/LTZY-API/middleware"
+	"github.com/xiaosu4610/LTZY-API/model"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -51,15 +52,17 @@ func SetApiRouter(router *gin.Engine) {
 			}
 
 			adminRoute := userRoute.Group("/")
-			adminRoute.Use(middleware.AdminAuth())
+			// 改用「权限点」校验（LTZY-API 新增，C4）：内置默认配置下与 AdminAuth 完全等价，
+			// 但管理员可以据此精细调整角色能力，甚至新建自定义角色。
+			adminRoute.Use(middleware.UserAuth())
 			{
-				adminRoute.GET("/", controller.GetAllUsers)
-				adminRoute.GET("/search", controller.SearchUsers)
-				adminRoute.GET("/:id", controller.GetUser)
-				adminRoute.POST("/", controller.CreateUser)
-				adminRoute.POST("/manage", controller.ManageUser)
-				adminRoute.PUT("/", controller.UpdateUser)
-				adminRoute.DELETE("/:id", controller.DeleteUser)
+				adminRoute.GET("/", middleware.PermissionAuth(model.PermUserRead), controller.GetAllUsers)
+				adminRoute.GET("/search", middleware.PermissionAuth(model.PermUserRead), controller.SearchUsers)
+				adminRoute.GET("/:id", middleware.PermissionAuth(model.PermUserRead), controller.GetUser)
+				adminRoute.POST("/", middleware.PermissionAuth(model.PermUserWrite), controller.CreateUser)
+				adminRoute.POST("/manage", middleware.PermissionAuth(model.PermUserWrite), controller.ManageUser)
+				adminRoute.PUT("/", middleware.PermissionAuth(model.PermUserWrite), controller.UpdateUser)
+				adminRoute.DELETE("/:id", middleware.PermissionAuth(model.PermUserWrite), controller.DeleteUser)
 			}
 		}
 		optionRoute := apiRouter.Group("/option")
@@ -69,23 +72,29 @@ func SetApiRouter(router *gin.Engine) {
 			// 系统设置写入是最高危操作，审计记录谁改了哪个配置（D4）
 			optionRoute.PUT("/", middleware.AuditOptionUpdate(), controller.UpdateOption)
 		}
-		channelRoute := apiRouter.Group("/channel")
-		channelRoute.Use(middleware.AdminAuth())
+		// 权限点清单与本人权限（LTZY-API 新增，C4）：前端据此控制菜单与按钮显隐
+		permissionRoute := apiRouter.Group("/permission")
+		permissionRoute.Use(middleware.UserAuth())
 		{
-			channelRoute.GET("/", controller.GetAllChannels)
-			channelRoute.GET("/search", controller.SearchChannels)
-			channelRoute.GET("/models", controller.ListAllModels)
-			channelRoute.GET("/health", controller.GetChannelHealth)
-			channelRoute.GET("/:id", controller.GetChannel)
-			channelRoute.GET("/test", controller.TestChannels)
-			channelRoute.GET("/test/:id", controller.TestChannel)
-			channelRoute.GET("/update_balance", controller.UpdateAllChannelsBalance)
-			channelRoute.GET("/update_balance/:id", controller.UpdateChannelBalance)
+			permissionRoute.GET("/", controller.GetPermissionList)
+		}
+		channelRoute := apiRouter.Group("/channel")
+		channelRoute.Use(middleware.UserAuth())
+		{
+			channelRoute.GET("/", middleware.PermissionAuth(model.PermChannelRead), controller.GetAllChannels)
+			channelRoute.GET("/search", middleware.PermissionAuth(model.PermChannelRead), controller.SearchChannels)
+			channelRoute.GET("/models", middleware.PermissionAuth(model.PermChannelRead), controller.ListAllModels)
+			channelRoute.GET("/health", middleware.PermissionAuth(model.PermChannelRead), controller.GetChannelHealth)
+			channelRoute.GET("/:id", middleware.PermissionAuth(model.PermChannelRead), controller.GetChannel)
+			channelRoute.GET("/test", middleware.PermissionAuth(model.PermChannelTest), controller.TestChannels)
+			channelRoute.GET("/test/:id", middleware.PermissionAuth(model.PermChannelTest), controller.TestChannel)
+			channelRoute.GET("/update_balance", middleware.PermissionAuth(model.PermChannelRead), controller.UpdateAllChannelsBalance)
+			channelRoute.GET("/update_balance/:id", middleware.PermissionAuth(model.PermChannelRead), controller.UpdateChannelBalance)
 			// 渠道含上游密钥，增删改全部审计（body 中 key 字段已脱敏）
-			channelRoute.POST("/", middleware.AuditAction("channel.create", ""), controller.AddChannel)
-			channelRoute.PUT("/", middleware.AuditAction("channel.update", ""), controller.UpdateChannel)
-			channelRoute.DELETE("/disabled", middleware.AuditAction("channel.delete_disabled", ""), controller.DeleteDisabledChannel)
-			channelRoute.DELETE("/:id", middleware.AuditActionFromParam("channel.delete", "id"), controller.DeleteChannel)
+			channelRoute.POST("/", middleware.PermissionAuth(model.PermChannelWrite), middleware.AuditAction("channel.create", ""), controller.AddChannel)
+			channelRoute.PUT("/", middleware.PermissionAuth(model.PermChannelWrite), middleware.AuditAction("channel.update", ""), controller.UpdateChannel)
+			channelRoute.DELETE("/disabled", middleware.PermissionAuth(model.PermChannelWrite), middleware.AuditAction("channel.delete_disabled", ""), controller.DeleteDisabledChannel)
+			channelRoute.DELETE("/:id", middleware.PermissionAuth(model.PermChannelWrite), middleware.AuditActionFromParam("channel.delete", "id"), controller.DeleteChannel)
 		}
 		tokenRoute := apiRouter.Group("/token")
 		tokenRoute.Use(middleware.UserAuth())
@@ -99,30 +108,30 @@ func SetApiRouter(router *gin.Engine) {
 			tokenRoute.DELETE("/:id", middleware.AuditActionFromParam("token.delete", "id"), controller.DeleteToken)
 		}
 		redemptionRoute := apiRouter.Group("/redemption")
-		redemptionRoute.Use(middleware.AdminAuth())
+		redemptionRoute.Use(middleware.UserAuth())
 		{
-			redemptionRoute.GET("/", controller.GetAllRedemptions)
-			redemptionRoute.GET("/search", controller.SearchRedemptions)
-			redemptionRoute.GET("/:id", controller.GetRedemption)
-			redemptionRoute.POST("/", controller.AddRedemption)
-			redemptionRoute.PUT("/", controller.UpdateRedemption)
-			redemptionRoute.DELETE("/:id", controller.DeleteRedemption)
+			redemptionRoute.GET("/", middleware.PermissionAuth(model.PermRedemptionRead), controller.GetAllRedemptions)
+			redemptionRoute.GET("/search", middleware.PermissionAuth(model.PermRedemptionRead), controller.SearchRedemptions)
+			redemptionRoute.GET("/:id", middleware.PermissionAuth(model.PermRedemptionRead), controller.GetRedemption)
+			redemptionRoute.POST("/", middleware.PermissionAuth(model.PermRedemptionWrite), controller.AddRedemption)
+			redemptionRoute.PUT("/", middleware.PermissionAuth(model.PermRedemptionWrite), controller.UpdateRedemption)
+			redemptionRoute.DELETE("/:id", middleware.PermissionAuth(model.PermRedemptionWrite), controller.DeleteRedemption)
 		}
 		logRoute := apiRouter.Group("/log")
-		logRoute.GET("/", middleware.AdminAuth(), controller.GetAllLogs)
-		logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
-		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
-		logRoute.GET("/cost", middleware.AdminAuth(), controller.GetCostAnalysis)
+		logRoute.GET("/", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.GetAllLogs)
+		logRoute.DELETE("/", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.DeleteHistoryLogs)
+		logRoute.GET("/stat", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.GetLogsStat)
+		logRoute.GET("/cost", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.GetCostAnalysis)
 		// 审计日志查询（LTZY-API 新增，D4）：与消费日志分开放，避免权限耦合
-		logRoute.GET("/audit", middleware.AdminAuth(), controller.GetAuditLogs)
+		logRoute.GET("/audit", middleware.UserAuth(), middleware.PermissionAuth(model.PermAuditRead), controller.GetAuditLogs)
 		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
-		logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
+		logRoute.GET("/search", middleware.UserAuth(), middleware.PermissionAuth(model.PermLogRead), controller.SearchAllLogs)
 		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogs)
 		logRoute.GET("/self/search", middleware.UserAuth(), controller.SearchUserLogs)
 		groupRoute := apiRouter.Group("/group")
-		groupRoute.Use(middleware.AdminAuth())
+		groupRoute.Use(middleware.UserAuth())
 		{
-			groupRoute.GET("/", controller.GetGroups)
+			groupRoute.GET("/", middleware.PermissionAuth(model.PermGroupRead), controller.GetGroups)
 		}
 		// Midjourney 任务（LTZY-API 新增，A4）
 		// 用 UserAuth 而非 TokenAuth：这些接口按「会话用户」扣费、且只能操作本人任务，
