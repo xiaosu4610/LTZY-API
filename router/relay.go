@@ -18,7 +18,7 @@ func SetRelayRouter(router *gin.Engine) {
 		modelsRouter.GET("/:model", controller.RetrieveModel)
 	}
 	relayV1Router := router.Group("/v1")
-	relayV1Router.Use(middleware.RelayPanicRecover(), middleware.SignatureVerify(), middleware.TokenAuth(), middleware.TokenRateLimit(), middleware.TokenConcurrencyLimit(), middleware.BudgetLimit(), middleware.Distribute())
+	relayV1Router.Use(middleware.RelayPanicRecover(), middleware.SignatureVerify(), middleware.TokenAuth(), middleware.TokenScope(), middleware.TokenRateLimit(), middleware.TokenConcurrencyLimit(), middleware.BudgetLimit(), middleware.Distribute())
 	{
 		relayV1Router.Any("/oneapi/proxy/:channelid/*target", controller.Relay)
 		relayV1Router.POST("/completions", controller.Relay)

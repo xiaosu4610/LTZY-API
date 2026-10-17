@@ -26,4 +26,5 @@ const (
 	TokenConcurrency  = "token_concurrency"
 	TokenDailyLimit   = "token_daily_limit"
 	TokenMonthlyLimit = "token_monthly_limit"
+	TokenAllowedModes = "token_allowed_modes"
 )

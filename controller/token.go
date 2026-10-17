@@ -2,15 +2,19 @@ package controller
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
+
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/common/network"
 	"github.com/xiaosu4610/LTZY-API/common/random"
 	"github.com/xiaosu4610/LTZY-API/model"
-	"net/http"
-	"strconv"
+	"github.com/xiaosu4610/LTZY-API/relay/relaymode"
 )
 
 func GetAllTokens(c *gin.Context) {
@@ -126,6 +130,19 @@ func validateToken(c *gin.Context, token model.Token) error {
 	if token.DailyQuotaLimit < 0 || token.MonthlyQuotaLimit < 0 {
 		return fmt.Errorf("预算上限不能为负数")
 	}
+	// 接口 scope 校验（LTZY-API 新增，C3）：逐个校验模式名，
+	// 避免写错一个词就让令牌实际可用范围与管理员预期不符
+	if token.AllowedModes != nil && strings.TrimSpace(*token.AllowedModes) != "" {
+		for _, modeName := range strings.Split(*token.AllowedModes, ",") {
+			modeName = strings.TrimSpace(modeName)
+			if modeName == "" {
+				continue
+			}
+			if !relaymode.IsValidName(modeName) {
+				return fmt.Errorf("无效的接口范围：%s（可选值：%s）", modeName, relaymode.NamesHelp())
+			}
+		}
+	}
 	return nil
 }
 
@@ -167,6 +184,8 @@ func AddToken(c *gin.Context) {
 		// 预算上限（LTZY-API 新增，B6）
 		DailyQuotaLimit:   token.DailyQuotaLimit,
 		MonthlyQuotaLimit: token.MonthlyQuotaLimit,
+		// 接口 scope（LTZY-API 新增，C3）
+		AllowedModes: token.AllowedModes,
 	}
 	err = cleanToken.Insert()
 	if err != nil {

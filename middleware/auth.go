@@ -139,6 +139,10 @@ func TokenAuth() func(c *gin.Context) {
 		// 令牌预算上限（LTZY-API 新增，B6）
 		c.Set(ctxkey.TokenDailyLimit, token.DailyQuotaLimit)
 		c.Set(ctxkey.TokenMonthlyLimit, token.MonthlyQuotaLimit)
+		// 令牌接口 scope（LTZY-API 新增，C3）：允许的中继模式，空表示不限制
+		if token.AllowedModes != nil {
+			c.Set(ctxkey.TokenAllowedModes, *token.AllowedModes)
+		}
 		if len(parts) > 1 {
 			if model.IsAdmin(token.UserId) {
 				c.Set(ctxkey.SpecificChannelId, parts[1])

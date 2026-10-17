@@ -18,6 +18,32 @@ import {
 } from '../../helpers';
 import { renderQuotaWithPrompt } from '../../helpers/render';
 
+// 可选的中继模式（与后端 relay/relaymode/name.go 的取值一一对应，C3）
+// 后端校验会拒绝非法值，这里只做展示，避免前后端两处维护两套校验逻辑
+const ALLOWED_MODE_OPTIONS = [
+  { key: 'chat', text: '对话 /v1/chat/completions', value: 'chat' },
+  { key: 'completions', text: '文本补全 /v1/completions', value: 'completions' },
+  { key: 'embeddings', text: '向量嵌入 /v1/embeddings', value: 'embeddings' },
+  { key: 'moderations', text: '内容审核 /v1/moderations', value: 'moderations' },
+  { key: 'images', text: '图像生成 /v1/images/generations', value: 'images' },
+  { key: 'edits', text: '图像编辑 /v1/edits', value: 'edits' },
+  { key: 'audio_speech', text: '语音合成 /v1/audio/speech', value: 'audio_speech' },
+  {
+    key: 'audio_transcription',
+    text: '语音识别 /v1/audio/transcriptions',
+    value: 'audio_transcription',
+  },
+  {
+    key: 'audio_translation',
+    text: '语音翻译 /v1/audio/translations',
+    value: 'audio_translation',
+  },
+  { key: 'rerank', text: '重排 /v1/rerank', value: 'rerank' },
+  { key: 'responses', text: 'Responses /v1/responses', value: 'responses' },
+  { key: 'videos', text: '视频生成 /v1/videos', value: 'videos' },
+  { key: 'proxy', text: '通用代理 /v1/oneapi/proxy', value: 'proxy' },
+];
+
 const EditToken = () => {
   const { t } = useTranslation();
   const params = useParams();
@@ -37,6 +63,7 @@ const EditToken = () => {
     concurrency: 0,
     daily_quota_limit: 0,
     monthly_quota_limit: 0,
+    allowed_modes: [],
   };
   const [inputs, setInputs] = useState(originInputs);
   const { name, remain_quota, expired_time, unlimited_quota } = inputs;
@@ -78,6 +105,12 @@ const EditToken = () => {
           data.models = [];
         } else {
           data.models = data.models.split(',');
+        }
+        // 接口 scope：字符串 ↔ 数组（LTZY-API 新增，C3）
+        if (!data.allowed_modes) {
+          data.allowed_modes = [];
+        } else {
+          data.allowed_modes = data.allowed_modes.split(',');
         }
         setInputs(data);
       } else {
@@ -135,6 +168,8 @@ const EditToken = () => {
       localInputs.expired_time = Math.ceil(time / 1000);
     }
     localInputs.models = localInputs.models.join(',');
+    // 接口 scope 是逗号分隔字符串，空数组表示不限制（LTZY-API 新增，C3）
+    localInputs.allowed_modes = (localInputs.allowed_modes || []).join(',');
     let res;
     if (isEdit) {
       res = await API.put(`/api/token/`, {
@@ -192,6 +227,20 @@ const EditToken = () => {
                 value={inputs.models}
                 autoComplete='new-password'
                 options={modelOptions}
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Dropdown
+                label='可调用的接口范围（不选表示不限制）'
+                placeholder='不选则允许全部接口'
+                name='allowed_modes'
+                fluid
+                multiple
+                selection
+                onChange={handleInputChange}
+                value={inputs.allowed_modes}
+                autoComplete='new-password'
+                options={ALLOWED_MODE_OPTIONS}
               />
             </Form.Field>
             <Form.Field>
