@@ -1,12 +1,14 @@
 package model
 
 import (
-	"github.com/xiaosu4610/LTZY-API/common/config"
-	"github.com/xiaosu4610/LTZY-API/common/logger"
-	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xiaosu4610/LTZY-API/common/config"
+	"github.com/xiaosu4610/LTZY-API/common/logger"
+	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
 )
 
 type Option struct {
@@ -70,6 +72,7 @@ func InitOptionMap() {
 	config.OptionMap["ModelRatio"] = billingratio.ModelRatio2JSONString()
 	config.OptionMap["GroupRatio"] = billingratio.GroupRatio2JSONString()
 	config.OptionMap["CompletionRatio"] = billingratio.CompletionRatio2JSONString()
+	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	config.OptionMap["TopUpLink"] = config.TopUpLink
 	config.OptionMap["ChatLink"] = config.ChatLink
 	config.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(config.QuotaPerUnit, 'f', -1, 64)
@@ -229,6 +232,12 @@ func updateOptionMap(key string, value string) (err error) {
 		err = billingratio.UpdateGroupRatioByJSONString(value)
 	case "CompletionRatio":
 		err = billingratio.UpdateCompletionRatioByJSONString(value)
+	case "ReasoningRatio":
+		// 写入前校验 JSON 结构与数值合法性，防止热更新把脏数据带进计费（LTZY-API 新增）。
+		// 校验函数放在 ratio 包：billing 包引用了 model，从 model 引 billing 会成环。
+		if validationErr := billingratio.ValidateReasoningRatioOption(value); validationErr != nil {
+			err = errors.Join(errors.New("ReasoningRatio 格式错误"), validationErr)
+		}
 	case "TopUpLink":
 		config.TopUpLink = value
 	case "ChatLink":

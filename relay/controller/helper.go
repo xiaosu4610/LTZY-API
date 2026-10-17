@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strings"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/middleware"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
+	"github.com/xiaosu4610/LTZY-API/relay/billing"
 	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
 	"github.com/xiaosu4610/LTZY-API/relay/channeltype"
 	"github.com/xiaosu4610/LTZY-API/relay/controller/validator"
@@ -106,7 +106,20 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	completionRatio := billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
-	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
+	// LTZY-API（B1/B2 接入）：改用统一定价模型结算，推理 token 支持独立倍率。
+	// ReasoningRatio 未配置时回退补全倍率，此时与旧公式
+	// ceil((prompt + completion*completionRatio) * ratio) 结果完全一致（有等价性测试兜底）。
+	reasoningTokens := 0
+	if usage.CompletionTokensDetails != nil {
+		reasoningTokens = usage.CompletionTokensDetails.ReasoningTokens
+	}
+	pricingModel := billing.NewTextPricingModel(textRequest.Model, modelRatio, completionRatio)
+	quota = pricingModel.CalcQuota(billing.UsageInput{
+		PromptTokens:     promptTokens,
+		CompletionTokens: completionTokens,
+		ReasoningTokens:  reasoningTokens,
+	}, groupRatio)
+	// 保留原实现的兜底：倍率非零但结果非正时至少计 1，防止 0 倍率补全/异常输入漏计费
 	if ratio != 0 && quota <= 0 {
 		quota = 1
 	}
@@ -126,6 +139,10 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		logger.Error(ctx, "error update user quota cache: "+err.Error())
 	}
 	logContent := fmt.Sprintf("倍率：%.2f × %.2f × %.2f", modelRatio, groupRatio, completionRatio)
+	// 推理 token 有独立倍率时在日志中体现，便于账单侧核对（LTZY-API 新增）
+	if reasoningTokens > 0 && pricingModel.ReasoningRatio != completionRatio {
+		logContent += fmt.Sprintf("（推理 token %d，倍率 %.2f）", reasoningTokens, pricingModel.ReasoningRatio)
+	}
 	model.RecordConsumeLog(ctx, &model.Log{
 		UserId:            meta.UserId,
 		ChannelId:         meta.ChannelId,

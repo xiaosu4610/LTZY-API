@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"math"
 	"testing"
 
 	"github.com/xiaosu4610/LTZY-API/common/config"
@@ -136,4 +137,68 @@ func setReasoningRatioOption(t *testing.T, value string) {
 	}
 	config.OptionMap["ReasoningRatio"] = value
 	config.OptionMapRWMutex.Unlock()
+}
+
+// TestCalcQuotaEquivalentToLegacy 锁死统一定价引擎与旧计费公式的等价性（B1 接入的安全网）。
+// 旧公式（helper.go 改造前）：ceil((prompt + completion*completionRatio) * modelRatio * groupRatio)，
+// 倍率非零但结果非正时兜底为 1。ReasoningRatio 未配置（=补全倍率）时两者必须逐分不差。
+func TestCalcQuotaEquivalentToLegacy(t *testing.T) {
+	setReasoningRatioOption(t, "")
+	defer setReasoningRatioOption(t, "")
+
+	cases := []struct {
+		prompt, completion int
+		modelRatio         float64
+		groupRatio         float64
+	}{
+		{0, 0, 2, 1},               // 全零（调用方仍会按 totalTokens==0 归零，这里只比对公式与兜底）
+		{1000, 500, 2, 1},          // 常规
+		{1000, 500, 2, 1.5},        // 群组倍率
+		{1, 0, 0.0001, 1},          // 小数向上取整为 1
+		{500, 0, 0.75, 1},          // 仅提示 token
+		{123, 456, 1.33, 2},        // 非整倍率
+		{777, 888, 3, 0.5},         // 折扣群组
+		{100, 200, 0, 1},           // 免费模型
+		{1048576, 1048576, 2.5, 3}, // 大数
+	}
+	const completionRatio = 4.0
+	for _, tc := range cases {
+		legacy := int64(math.Ceil((float64(tc.prompt) + float64(tc.completion)*completionRatio) * tc.modelRatio * tc.groupRatio))
+		m := PricingModel{
+			Mode:            PricingModeToken,
+			ModelRatio:      tc.modelRatio,
+			CompletionRatio: completionRatio,
+			PromptRatio:     1,
+			ReasoningRatio:  completionRatio, // 未配置时的回退值
+		}
+		got := m.CalcQuota(UsageInput{PromptTokens: tc.prompt, CompletionTokens: tc.completion}, tc.groupRatio)
+		// postConsumeQuota 保留了原实现的兜底：倍率非零但结果非正时至少计 1
+		if tc.modelRatio*tc.groupRatio != 0 {
+			if legacy <= 0 {
+				legacy = 1
+			}
+			if got <= 0 {
+				got = 1
+			}
+		}
+		if got != legacy {
+			t.Fatalf("case %+v: 新旧公式不一致，got %d, legacy %d", tc, got, legacy)
+		}
+	}
+}
+
+// TestNewTextPricingModelFallback 验证结算路径构造器：ReasoningRatio 未配置时回退补全倍率
+func TestNewTextPricingModelFallback(t *testing.T) {
+	setReasoningRatioOption(t, "")
+	defer setReasoningRatioOption(t, "")
+
+	m := NewTextPricingModel("o1", 2, 4)
+	if m.ReasoningRatio != 4 {
+		t.Fatalf("未配置时应回退补全倍率，got %f", m.ReasoningRatio)
+	}
+	setReasoningRatioOption(t, `{"o1":8}`)
+	m = NewTextPricingModel("o1", 2, 4)
+	if m.ReasoningRatio != 8 {
+		t.Fatalf("配置后应生效，got %f", m.ReasoningRatio)
+	}
 }

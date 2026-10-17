@@ -97,12 +97,29 @@ func (m PricingModel) CalcQuota(input UsageInput, groupRatio float64) int64 {
 
 // GetPricingModel 从既有倍率表推导默认的 token 计费模型
 func GetPricingModel(modelName string, channelType int) PricingModel {
+	modelRatio := ratio.GetModelRatio(modelName, channelType)
+	completionRatio := ratio.GetCompletionRatio(modelName, channelType)
+	return newTextPricingModel(modelName, modelRatio, completionRatio)
+}
+
+// NewTextPricingModel 用已算好的倍率构建 token 计费模型。
+// 结算路径复用调用方算出的 modelRatio / completionRatio，避免二次查表；
+// 若模型倍率因渠道差异（GetModelRatio 支持按渠道后缀取价）与调用方不一致，以调用方为准。
+func NewTextPricingModel(modelName string, modelRatio float64, completionRatio float64) PricingModel {
+	return newTextPricingModel(modelName, modelRatio, completionRatio)
+}
+
+// newTextPricingModel 统一构建入口。
+// ReasoningRatio 未单独配置时回退补全倍率——这是保证与旧计费公式
+// ceil((prompt + completion*completionRatio) * modelRatio * groupRatio)
+// 结果完全一致的关键：推理 token 视为普通补全 token 计费。
+func newTextPricingModel(modelName string, modelRatio float64, completionRatio float64) PricingModel {
 	return PricingModel{
 		Mode:            PricingModeToken,
-		ModelRatio:      ratio.GetModelRatio(modelName, channelType),
-		CompletionRatio: ratio.GetCompletionRatio(modelName, channelType),
+		ModelRatio:      modelRatio,
+		CompletionRatio: completionRatio,
 		PromptRatio:     1.0,
-		ReasoningRatio:  GetReasoningRatio(modelName),
+		ReasoningRatio:  GetReasoningRatioWithFallback(modelName, completionRatio),
 	}
 }
 
@@ -142,6 +159,13 @@ func parseReasoningRatioOption(value string) map[string]float64 {
 
 // GetReasoningRatio 获取推理 token 倍率：优先读取 DB Option，未配置时回退默认值 1.0
 func GetReasoningRatio(modelName string) float64 {
+	return GetReasoningRatioWithFallback(modelName, 1.0)
+}
+
+// GetReasoningRatioWithFallback 获取推理 token 倍率，未配置时使用调用方给定的回退值。
+// 结算路径回退到补全倍率（与旧公式等价），而不是固定 1.0 —— 否则补全倍率较高的模型
+// （如 o1 / deepseek-reasoner）的推理 token 会被按更低单价计费，造成收入流失。
+func GetReasoningRatioWithFallback(modelName string, fallback float64) float64 {
 	config.OptionMapRWMutex.RLock()
 	optionValue := config.OptionMap["ReasoningRatio"]
 	config.OptionMapRWMutex.RUnlock()
@@ -150,5 +174,5 @@ func GetReasoningRatio(modelName string) float64 {
 	if r, ok := ratios[modelName]; ok {
 		return r
 	}
-	return 1.0
+	return fallback
 }
