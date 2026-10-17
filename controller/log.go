@@ -10,6 +10,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/model"
+	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
 )
 
 func GetAllLogs(c *gin.Context) {
@@ -182,13 +183,19 @@ func GetCostAnalysis(c *gin.Context) {
 	}
 
 	// 总额概览：对模型维度求和即可覆盖全部消费
-	var totalQuota, totalRequests, totalPromptTokens, totalCompletionTokens int64
+	var totalQuota, totalRequests, totalPromptTokens, totalCompletionTokens, totalCostQuota int64
 	for _, s := range modelStats {
 		totalQuota += s.Quota
 		totalRequests += s.RequestCount
 		totalPromptTokens += s.PromptTokens
 		totalCompletionTokens += s.CompletionTokens
+		totalCostQuota += s.CostQuota
 	}
+	// 毛利（LTZY-API 新增，B7）：收入 − 上游成本。
+	// 注意语义：cost_quota 全为 0 表示「未配置进价」，此时毛利等于收入，
+	// 并不代表真的无成本 —— 因此额外返回 cost_configured 让前端能区分这两种情况。
+	costConfigured := billingratio.HasCostRatio()
+	grossProfit := totalQuota - totalCostQuota
 
 	// 渠道维度按请求量降序后取 TopN
 	sort.Slice(channelStats, func(i, j int) bool {
@@ -222,6 +229,10 @@ func GetCostAnalysis(c *gin.Context) {
 				"request_count":     totalRequests,
 				"prompt_tokens":     totalPromptTokens,
 				"completion_tokens": totalCompletionTokens,
+				// 成本与毛利（B7）
+				"cost_quota":       totalCostQuota,
+				"gross_profit":     grossProfit,
+				"cost_configured":  costConfigured,
 			},
 			"models":   modelStats,
 			"users":    userStats,

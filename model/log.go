@@ -10,6 +10,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
+	billingratio "github.com/xiaosu4610/LTZY-API/relay/billing/ratio"
 )
 
 type Log struct {
@@ -29,6 +30,9 @@ type Log struct {
 	ElapsedTime       int64  `json:"elapsed_time" gorm:"default:0"` // unit is ms
 	IsStream          bool   `json:"is_stream" gorm:"default:false"`
 	SystemPromptReset bool   `json:"system_prompt_reset" gorm:"default:false"`
+	// 上游成本（LTZY-API 新增，B7）：与 Quota（售价）同口径，便于直接算毛利。
+	// 0 表示"未配置进价/未知成本"，不等价于"零成本"。
+	CostQuota int64 `json:"cost_quota" gorm:"bigint;default:0"`
 }
 
 const (
@@ -88,6 +92,12 @@ func RecordConsumeLog(ctx context.Context, log *Log) {
 	log.Username = GetUsernameById(log.UserId)
 	log.CreatedAt = helper.GetTimestamp()
 	log.Type = LogTypeConsume
+	// 上游成本（LTZY-API 新增，B7）：在这里统一算并落库，而不是散落到各结算出口。
+	// 好处有两个：一处覆盖全部计费模式；成本是「当时」的进价，
+	// 事后改 CostRatio 不会篡改历史账单（否则毛利报表会随配置漂移）。
+	if log.CostQuota == 0 {
+		log.CostQuota = billingratio.CalcCostQuota(log.ModelName, log.PromptTokens, log.CompletionTokens)
+	}
 	recordLogHelper(ctx, log)
 }
 
@@ -222,6 +232,7 @@ type ChannelStatistic struct {
 	ChannelId        int   `json:"channel_id" gorm:"column:channel_id"`
 	RequestCount     int64 `json:"request_count" gorm:"column:request_count"`
 	Quota            int64 `json:"quota" gorm:"column:quota"`
+	CostQuota        int64 `json:"cost_quota" gorm:"column:cost_quota"` // 上游成本（B7）
 	PromptTokens     int64 `json:"prompt_tokens" gorm:"column:prompt_tokens"`
 	CompletionTokens int64 `json:"completion_tokens" gorm:"column:completion_tokens"`
 	AvgElapsedTime   int64 `json:"avg_elapsed_time" gorm:"column:avg_elapsed_time"`
@@ -236,8 +247,9 @@ func GetChannelStatistics(startTimestamp int64, endTimestamp int64) (stats []*Ch
 	}
 	tx := LOG_DB.Table("logs").
 		Select(fmt.Sprintf("channel_id, count(*) as request_count, %s(sum(quota),0) as quota, "+
+			"%s(sum(cost_quota),0) as cost_quota, "+
 			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens, "+
-			"%s(avg(elapsed_time),0) as avg_elapsed_time", ifnull, ifnull, ifnull, ifnull)).
+			"%s(avg(elapsed_time),0) as avg_elapsed_time", ifnull, ifnull, ifnull, ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
@@ -254,6 +266,7 @@ type ModelCostStatistic struct {
 	ModelName        string `json:"model_name" gorm:"column:model_name"`
 	RequestCount     int64  `json:"request_count" gorm:"column:request_count"`
 	Quota            int64  `json:"quota" gorm:"column:quota"`
+	CostQuota        int64  `json:"cost_quota" gorm:"column:cost_quota"` // 上游成本（B7）
 	PromptTokens     int64  `json:"prompt_tokens" gorm:"column:prompt_tokens"`
 	CompletionTokens int64  `json:"completion_tokens" gorm:"column:completion_tokens"`
 }
@@ -264,6 +277,7 @@ type UserCostStatistic struct {
 	Username     string `json:"username" gorm:"column:username"`
 	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
 	Quota        int64  `json:"quota" gorm:"column:quota"`
+	CostQuota    int64  `json:"cost_quota" gorm:"column:cost_quota"` // 上游成本（B7）
 }
 
 // DailyCostStatistic 按日维度的成本趋势统计（LTZY-API 新增）。
@@ -271,6 +285,7 @@ type DailyCostStatistic struct {
 	Day          string `json:"day" gorm:"column:day"`
 	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
 	Quota        int64  `json:"quota" gorm:"column:quota"`
+	CostQuota    int64  `json:"cost_quota" gorm:"column:cost_quota"` // 上游成本（B7）
 	Tokens       int64  `json:"tokens" gorm:"column:tokens"`
 }
 
@@ -282,7 +297,9 @@ func GetModelCostStatistics(startTimestamp int64, endTimestamp int64, limit int)
 	}
 	tx := LOG_DB.Table("logs").
 		Select(fmt.Sprintf("model_name, count(*) as request_count, %s(sum(quota),0) as quota, "+
-			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens", ifnull, ifnull, ifnull)).
+			"%s(sum(cost_quota),0) as cost_quota, "+
+			"%s(sum(prompt_tokens),0) as prompt_tokens, %s(sum(completion_tokens),0) as completion_tokens",
+			ifnull, ifnull, ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
@@ -305,7 +322,8 @@ func GetUserCostStatistics(startTimestamp int64, endTimestamp int64, limit int) 
 		ifnull = "COALESCE"
 	}
 	tx := LOG_DB.Table("logs").
-		Select(fmt.Sprintf("user_id, username, count(*) as request_count, %s(sum(quota),0) as quota", ifnull)).
+		Select(fmt.Sprintf("user_id, username, count(*) as request_count, %s(sum(quota),0) as quota, "+
+			"%s(sum(cost_quota),0) as cost_quota", ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)
@@ -336,7 +354,9 @@ func GetDailyCostStatistics(startTimestamp int64, endTimestamp int64) (stats []*
 	}
 	tx := LOG_DB.Table("logs").
 		Select(fmt.Sprintf("%s as day, count(*) as request_count, %s(sum(quota),0) as quota, "+
-			"%s(sum(prompt_tokens) + sum(completion_tokens),0) as tokens", groupSelect, ifnull, ifnull)).
+			"%s(sum(cost_quota),0) as cost_quota, "+
+			"%s(sum(prompt_tokens) + sum(completion_tokens),0) as tokens",
+			groupSelect, ifnull, ifnull, ifnull)).
 		Where("type = ?", LogTypeConsume)
 	if startTimestamp != 0 {
 		tx = tx.Where("created_at >= ?", startTimestamp)

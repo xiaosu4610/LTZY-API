@@ -74,6 +74,8 @@ func InitOptionMap() {
 	config.OptionMap["CompletionRatio"] = billingratio.CompletionRatio2JSONString()
 	// 分组×模型 二维定价矩阵（LTZY-API 新增，B3）：JSON 如 {"vip":{"gpt-4o":0.8}}
 	config.OptionMap["ModelGroupRatio"] = billingratio.ModelGroupRatio2JSONString()
+	// 上游成本倍率（LTZY-API 新增，B7）：JSON 如 {"gpt-4o":1.6,"*":2.0}
+	config.OptionMap["CostRatio"] = billingratio.CostRatio2JSONString()
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
 	config.OptionMap["TieredRatio"] = ""
@@ -246,6 +248,9 @@ func updateOptionMap(key string, value string) (err error) {
 	case "ModelGroupRatio":
 		// 分组×模型 二维定价矩阵：解析失败或含负值时保留原矩阵，避免配置写错导致计费失控
 		err = billingratio.UpdateModelGroupRatioByJSONString(value)
+	case "CostRatio":
+		// 上游成本倍率（B7）：同样在写入前校验，脏数据会让毛利报表失真
+		err = billingratio.UpdateCostRatioByJSONString(value)
 	case "CompletionRatio":
 		err = billingratio.UpdateCompletionRatioByJSONString(value)
 	case "ReasoningRatio":
