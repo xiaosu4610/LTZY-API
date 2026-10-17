@@ -85,6 +85,19 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			permissionRoute.GET("/", controller.GetPermissionList)
 		}
+		// 子账号（LTZY-API 新增，C6）：一个钱包、多把钥匙、各自限额。
+		// 走 UserAuth 而非 AdminAuth —— 这是个人/团队内部的钱包管理，不是平台管理能力；
+		// 每个接口内部都会校验「目标用户确实是调用者的子账号」。
+		childRoute := apiRouter.Group("/subaccount")
+		childRoute.Use(middleware.UserAuth())
+		{
+			childRoute.GET("/", controller.GetChildAccounts)
+			childRoute.POST("/", controller.AddChildAccount)
+			childRoute.POST("/:id/transfer", controller.TransferQuotaToChild)
+			childRoute.POST("/:id/reclaim", controller.ReclaimQuotaFromChild)
+			childRoute.PUT("/:id/password", controller.ResetChildPassword)
+			childRoute.DELETE("/:id", controller.DeleteChildAccount)
+		}
 		// 租户管理（LTZY-API 新增，C5）：创建租户与变更归属会直接改变数据可见范围，
 		// 属最高危操作，与系统设置同级，仅 root 可用。
 		tenantRoute := apiRouter.Group("/tenant")
