@@ -164,3 +164,8 @@ var UserContentRequestTimeout = env.Int("USER_CONTENT_REQUEST_TIMEOUT", 30)
 
 var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
 var TestPrompt = env.String("TEST_PROMPT", "Output only your specific model name with no additional text.")
+
+// CorsAllowOrigins 跨域白名单（LTZY-API 新增）。
+// 逗号分隔的域名列表，例如 "https://ltzy.top,https://admin.ltzy.top"；
+// 留空表示沿用历史行为（允许所有来源），便于开箱即用与平滑迁移。
+var CorsAllowOrigins = env.String("CORS_ALLOW_ORIGINS", "")
