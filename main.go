@@ -19,6 +19,7 @@ import (
 	"github.com/xiaosu4610/LTZY-API/controller"
 	"github.com/xiaosu4610/LTZY-API/middleware"
 	"github.com/xiaosu4610/LTZY-API/model"
+	"github.com/xiaosu4610/LTZY-API/monitor"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
 	"github.com/xiaosu4610/LTZY-API/router"
 )
@@ -91,6 +92,8 @@ func main() {
 	if config.EnableMetric {
 		logger.SysLog("metric enabled, will disable channel if too much request failed")
 	}
+	// 用量/成本告警（LTZY-API 新增，D6）：阈值未配置时不启动，零开销
+	monitor.StartUsageAlert()
 	openai.InitTokenEncoders()
 	client.Init()
 
