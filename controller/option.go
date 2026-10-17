@@ -17,7 +17,9 @@ func GetOptions(c *gin.Context) {
 	var options []*model.Option
 	config.OptionMapRWMutex.Lock()
 	for k, v := range config.OptionMap {
-		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") {
+		// TurnstileSecretKey 是同一个策略下的漏网之鱼：它不以 Token/Secret 结尾，
+		// 但同样是机密（前端对该字段本来就是「留空=不修改」的用法，不会因为不返回而丢失配置）。
+		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") || k == "TurnstileSecretKey" {
 			continue
 		}
 		options = append(options, &model.Option{

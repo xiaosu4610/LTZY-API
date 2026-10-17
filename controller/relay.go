@@ -137,10 +137,13 @@ func shouldRetry(c *gin.Context, statusCode int) bool {
 }
 
 func processChannelRelayError(ctx context.Context, userId int, channelId int, channelName string, err model.ErrorWithStatusCode) {
-	logger.Errorf(ctx, "relay error (channel id %d, user id: %d): %s", channelId, userId, err.Message)
+	// 上游报错原文经常把密钥/令牌一起回显（且会随自动禁用通知发到邮件与 IM），
+	// 所以进日志与进监控前先做一次凭据脱敏。
+	safeMessage := common.MaskString(err.Message)
+	logger.Errorf(ctx, "relay error (channel id %d, user id: %d): %s", channelId, userId, safeMessage)
 	// https://platform.openai.com/docs/guides/error-codes/api-errors
 	if monitor.ShouldDisableChannel(&err.Error, err.StatusCode) {
-		monitor.DisableChannel(channelId, channelName, err.Message)
+		monitor.DisableChannel(channelId, channelName, safeMessage)
 	} else {
 		monitor.Emit(channelId, false)
 	}

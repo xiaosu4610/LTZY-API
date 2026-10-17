@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/helper"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
 	"github.com/xiaosu4610/LTZY-API/relay/adaptor/openai"
@@ -36,7 +37,9 @@ func ImageHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCo
 	}
 
 	if aliTaskResponse.Message != "" {
-		logger.SysError("aliAsyncTask err: " + string(responseBody))
+		// 上游错误响应体是原文落盘，且这条路径不受 DEBUG 开关控制；
+		// 部分上游会在报错里回显密钥，先脱敏再写日志。
+		logger.SysError("aliAsyncTask err: " + common.MaskString(string(responseBody)))
 		return openai.ErrorWrapper(errors.New(aliTaskResponse.Message), "ali_async_task_failed", http.StatusInternalServerError), nil
 	}
 

@@ -48,7 +48,11 @@ func recordLogHelper(ctx context.Context, log *Log) {
 		logger.Error(ctx, "failed to record log: "+err.Error())
 		return
 	}
-	logger.Infof(ctx, "record log: %+v", log)
+	// 只打印固定字段的安全摘要，不再用 %+v 整个结构体：
+	// Content 的来源包括上游报错原文与渠道测试响应，部分上游会在报错里回显密钥，
+	// 整个结构体打印（或直接打印 Content）都可能把凭据带进日志文件。
+	logger.Infof(ctx, "record log: id=%d type=%d user_id=%d model=%s channel=%d quota=%d content=%s",
+		log.Id, log.Type, log.UserId, log.ModelName, log.ChannelId, log.Quota, common.MaskString(log.Content))
 }
 
 func RecordLog(ctx context.Context, userId int, logType int, content string) {

@@ -3,6 +3,8 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
 	"github.com/xiaosu4610/LTZY-API/relay/model"
@@ -77,7 +79,10 @@ func RelayErrorHandler(resp *http.Response) (ErrorWithStatusCode *model.ErrorWit
 		return
 	}
 	if config.DebugEnabled {
-		logger.SysLog(fmt.Sprintf("error happened, status code: %d, response: \n%s", resp.StatusCode, string(responseBody)))
+		// 上游错误响应里可能原样回显我们提交的密钥（如 OpenAI 的
+		// "Incorrect API key provided: sk-..."），这条日志虽然只在 DEBUG 下输出，
+		// 但排障时恰恰最容易被长期打开，所以统一脱敏。
+		logger.SysLog(fmt.Sprintf("error happened, status code: %d, response: \n%s", resp.StatusCode, common.MaskString(string(responseBody))))
 	}
 	err = resp.Body.Close()
 	if err != nil {

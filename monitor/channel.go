@@ -3,6 +3,7 @@ package monitor
 import (
 	"fmt"
 
+	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
 	"github.com/xiaosu4610/LTZY-API/common/message"
@@ -33,7 +34,10 @@ func notifyRootUser(subject string, content string) {
 // DisableChannel disable & notify
 func DisableChannel(channelId int, channelName string, reason string) {
 	model.UpdateChannelStatusById(channelId, model.ChannelStatusAutoDisabled)
-	logger.SysLog(fmt.Sprintf("channel #%d has been disabled: %s", channelId, reason))
+	// 禁用原因既写日志又原样发到邮件/Webhook/IM，而上游报错常把密钥回显在错误信息里。
+	// 这里是所有禁用路径的唯一出口，统一脱敏，省得每个调用方各修一遍。
+	safeReason := common.MaskString(reason)
+	logger.SysLog(fmt.Sprintf("channel #%d has been disabled: %s", channelId, safeReason))
 	subject := fmt.Sprintf("渠道状态变更提醒")
 	content := message.EmailTemplate(
 		subject,
@@ -42,7 +46,7 @@ func DisableChannel(channelId int, channelName string, reason string) {
 			<p>渠道「<strong>%s</strong>」（#%d）已被禁用。</p>
 			<p>禁用原因：</p>
 			<p style="background-color: #f8f8f8; padding: 10px; border-radius: 4px;">%s</p>
-		`, channelName, channelId, reason),
+		`, channelName, channelId, safeReason),
 	)
 	notifyRootUser(subject, content)
 }

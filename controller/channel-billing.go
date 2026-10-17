@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/common/client"
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/logger"
@@ -169,10 +170,12 @@ func updateChannelCloseAIBalance(channel *model.Channel) (float64, error) {
 }
 
 func updateChannelOpenAISBBalance(channel *model.Channel) (float64, error) {
+	// 该上游的 api_key 只能放在 URL query 上，请求失败时 *url.Error 会带回整条 URL，
+	// 而这里的 error 会直接作为 message 回显给前端，所以先脱敏再返回。
 	url := fmt.Sprintf("https://api.openai-sb.com/sb-api/user/status?api_key=%s", channel.Key)
 	body, err := GetResponseBody("GET", url, channel, GetAuthHeader(channel.Key))
 	if err != nil {
-		return 0, err
+		return 0, errors.New(common.MaskString(err.Error()))
 	}
 	response := OpenAISBUsageResponse{}
 	err = json.Unmarshal(body, &response)

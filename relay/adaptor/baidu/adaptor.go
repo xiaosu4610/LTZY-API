@@ -3,6 +3,8 @@ package baidu
 import (
 	"errors"
 	"fmt"
+
+	"github.com/xiaosu4610/LTZY-API/common"
 	"github.com/xiaosu4610/LTZY-API/relay/meta"
 	"github.com/xiaosu4610/LTZY-API/relay/relaymode"
 	"io"
@@ -117,7 +119,14 @@ func (a *Adaptor) ConvertImageRequest(request *model.ImageRequest) (any, error) 
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Reader) (*http.Response, error) {
-	return adaptor.DoRequestHelper(a, c, meta, requestBody)
+	resp, err := adaptor.DoRequestHelper(a, c, meta, requestBody)
+	if err != nil {
+		// 百度要求把 access_token 放在 URL query 上，而 *url.Error 会把整条 URL 拼进错误串；
+		// 这条错误既会被各中继入口写日志，也会回显给调用方，等于泄露上游凭据。
+		// 在这里统一脱敏，比在每个日志点各打一次补丁更不容易漏。
+		return nil, errors.New(common.MaskString(err.Error()))
+	}
+	return resp, nil
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {

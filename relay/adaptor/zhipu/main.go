@@ -39,7 +39,9 @@ func GetToken(apikey string) string {
 
 	split := strings.Split(apikey, ".")
 	if len(split) != 2 {
-		logger.SysError("invalid zhipu key: " + apikey)
+		// 这里原本直接把 apikey 原文拼进日志，而 apikey 就是渠道上游密钥，
+		// 一旦格式填错就会把密钥完整写进日志文件；改为只留可辨认的首尾字符。
+		logger.SysError("invalid zhipu key: " + common.MaskSecret(apikey))
 		return ""
 	}
 

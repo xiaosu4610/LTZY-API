@@ -60,7 +60,10 @@ func GetMaxUserId() int {
 }
 
 func GetAllUsers(startIdx int, num int, order string) (users []*User, err error) {
-	query := DB.Limit(num).Offset(startIdx).Omit("password").Where("status != ?", UserStatusDeleted)
+	// access_token 是「系统管理」凭据，等价于该用户的完整身份（可当会话用），
+	// 用户列表页只需要额度/角色/状态，回显它会让一个普通管理员拿到 root 的令牌
+	// 从而越权；这里与 password 一起排除，个人令牌仍可通过 /api/user/token 自行获取。
+	query := DB.Limit(num).Offset(startIdx).Omit("password", "access_token").Where("status != ?", UserStatusDeleted)
 
 	switch order {
 	case "quota":
@@ -78,10 +81,11 @@ func GetAllUsers(startIdx int, num int, order string) (users []*User, err error)
 }
 
 func SearchUsers(keyword string) (users []*User, err error) {
+	// 同 GetAllUsers：搜索结果同样不能带出 access_token
 	if !common.UsingPostgreSQL {
-		err = DB.Omit("password").Where("id = ? or username LIKE ? or email LIKE ? or display_name LIKE ?", keyword, keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
+		err = DB.Omit("password", "access_token").Where("id = ? or username LIKE ? or email LIKE ? or display_name LIKE ?", keyword, keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
 	} else {
-		err = DB.Omit("password").Where("username LIKE ? or email LIKE ? or display_name LIKE ?", keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
+		err = DB.Omit("password", "access_token").Where("username LIKE ? or email LIKE ? or display_name LIKE ?", keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
 	}
 	return users, err
 }
