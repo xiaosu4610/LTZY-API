@@ -163,6 +163,19 @@ func migrateDB() error {
 	return nil
 }
 
+// PingDB 轻量探活数据库（LTZY-API 新增，D7）：供 /readyz 就绪检查使用。
+// 统一取底层连接池 Ping，三种数据库（SQLite/MySQL/PostgreSQL）行为一致。
+func PingDB() error {
+	if DB == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Ping()
+}
+
 func InitLogDB() {
 	if os.Getenv("LOG_SQL_DSN") == "" {
 		LOG_DB = DB

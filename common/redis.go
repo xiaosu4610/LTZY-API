@@ -79,3 +79,11 @@ func RedisDecrease(key string, value int64) error {
 	ctx := context.Background()
 	return RDB.DecrBy(ctx, key, value).Err()
 }
+
+// PingRedis 探活 Redis（LTZY-API 新增，D7）：带 2 秒超时，供 /readyz 就绪检查使用。
+// 注意：仅在 RedisEnabled 时调用，否则 RDB 为 nil 会 panic。
+func PingRedis() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return RDB.Ping(ctx).Err()
+}
