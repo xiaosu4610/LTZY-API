@@ -10,6 +10,9 @@ import (
 )
 
 func notifyRootUser(subject string, content string) {
+	// 新增渠道（Webhook/飞书/钉钉/Slack）与原有邮件、MessagePusher 是并列关系，
+	// 必须放在下面「MessagePusher 成功后 return」之前，否则会被那条提前返回跳过。
+	message.NotifyExtraChannels(subject, content, content)
 	if config.MessagePusherAddress != "" {
 		err := message.SendMessage(subject, content, content)
 		if err != nil {

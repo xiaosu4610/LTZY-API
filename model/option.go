@@ -77,6 +77,12 @@ func InitOptionMap() {
 	config.OptionMap["ReasoningRatio"] = "" // 推理 token 倍率（LTZY-API 新增）：JSON 如 {"o1":2.0}，空 = 未配置
 	// 用量阶梯定价（LTZY-API 新增，B4）：JSON 如 {"gpt-4o":[{"threshold":0,"ratio":1.0}]}
 	config.OptionMap["TieredRatio"] = ""
+	// 多通知渠道（LTZY-API 新增，D5）：留空即跳过该渠道
+	config.OptionMap["WebhookURL"] = ""
+	config.OptionMap["LarkWebhookURL"] = ""
+	config.OptionMap["DingTalkWebhookURL"] = ""
+	config.OptionMap["DingTalkSecret"] = ""
+	config.OptionMap["SlackWebhookURL"] = ""
 	// 全局用户级预算默认值（LTZY-API 新增，B6）：单位与 quota 一致，0 = 不限制
 	config.OptionMap["DefaultUserDailyQuotaLimit"] = "0"
 	config.OptionMap["DefaultUserMonthlyQuotaLimit"] = "0"
