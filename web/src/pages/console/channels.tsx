@@ -150,6 +150,22 @@ export default function ChannelsPage() {
       title: t('channel.type'),
       render: (row) => <Badge>{channelTypeName(row.type)}</Badge>,
     },
+    {
+      // 多密钥渠道（LTZY-API）：显示密钥把数与当前冷却中的把数
+      key: 'keys',
+      title: t('channel.keyLabel'),
+      render: (row) => {
+        const count = row.key_count ?? 1;
+        const cooling = row.key_cooling ?? 0;
+        if (count <= 1 && cooling === 0) return <span className="text-xs text-[var(--ltzy-muted)]">1</span>;
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <Badge tone="primary">{t('channel.keysCount', { count })}</Badge>
+            {cooling > 0 ? <Badge tone="warning">{t('channel.keysCooling', { count: cooling })}</Badge> : null}
+          </div>
+        );
+      },
+    },
     { key: 'status', title: t('channel.status'), render: (row) => statusBadge(row.status) },
     {
       key: 'models',

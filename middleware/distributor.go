@@ -75,7 +75,12 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	}
 	c.Set(ctxkey.ModelMapping, channel.GetModelMapping())
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
-	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+	// 多密钥渠道（LTZY-API 新增）：Key 字段可以放多行密钥，这里轮流挑一把。
+	// 之所以在「设置请求头」这一层落地，是因为下游适配器统一从 Authorization 头取密钥
+	// （meta.GetByContext），改这里等于对全部适配器一次性生效，无需逐个改。
+	usedKey := model.PickChannelKey(channel)
+	c.Set(ctxkey.ChannelKey, usedKey)
+	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", usedKey))
 	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
 	cfg, _ := channel.LoadConfig()
 	// this is for backward compatibility

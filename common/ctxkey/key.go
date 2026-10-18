@@ -15,6 +15,9 @@ const (
 	Group             = "group"
 	ModelMapping      = "model_mapping"
 	ChannelName       = "channel_name"
+	// ChannelKey 本次请求实际使用的那把密钥（LTZY-API 新增）。
+	// 多密钥渠道会在请求开始时轮流挑一把，失败时靠它精确定位到具体密钥去冷却。
+	ChannelKey = "channel_key"
 	TokenId           = "token_id"
 	TokenName         = "token_name"
 	BaseURL           = "base_url"

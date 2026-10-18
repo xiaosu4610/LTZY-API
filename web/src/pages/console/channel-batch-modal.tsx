@@ -27,9 +27,11 @@ interface Props {
 /**
  * 批量导入渠道（LTZY-API 新增）。
  *
- * 典型场景：一个上游网关配了多把密钥，每把密钥能用的模型不同、进货价也不同。
- * 在本项目的模型里这些差异只能靠「一把密钥 = 一条渠道」表达，
- * 于是这里做成「共用一份地址/模型，粘贴多行密钥，一次建完」。
+ * 典型场景：一个上游网关配了几百把密钥（如英伟达的免费额度），
+ * 它们的模型列表完全一致，只是额度与限流各自独立。
+ * 这里做成「共用一份上游地址/模型，粘贴多行密钥」——
+ * 多行密钥会合并进**同一条渠道**，请求时轮流使用（见 model/channel_key.go）。
+ * 需要各自的模型列表或进货价时，才拆成多条渠道分别填。
  */
 export function ChannelBatchModal({ open, onClose, onDone }: Props) {
   const { t } = useTranslation();
@@ -85,7 +87,7 @@ export function ChannelBatchModal({ open, onClose, onDone }: Props) {
     }
     setPending(true);
     try {
-      const result = (await mutate('/api/channel/batch', 'post', {
+      await mutate('/api/channel/batch', 'post', {
         type,
         base_url: baseUrl.trim(),
         group: group.trim() || 'default',
@@ -97,8 +99,8 @@ export function ChannelBatchModal({ open, onClose, onDone }: Props) {
             plan_type: planType,
           },
         ],
-      })) as unknown as { data?: { created?: number } };
-      toast.success(t('channelBatch.imported', { count: result?.data?.created ?? keyLines.length }));
+      });
+      toast.success(t('channelBatch.imported', { count: keyLines.length }));
       setKeys('');
       onDone();
       onClose();

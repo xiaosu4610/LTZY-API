@@ -75,6 +75,9 @@ export interface Channel {
   model_mapping?: string;
   status_code_mapping?: string;
   param_override?: string;
+  // 多密钥渠道（LTZY-API）：key 字段里的密钥把数与当前冷却中的把数，仅接口返回时填充
+  key_count?: number;
+  key_cooling?: number;
 }
 
 export interface Log {

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -57,12 +58,14 @@ type batchChannelRequest struct {
 
 // BatchAddChannels 批量新建渠道（LTZY-API 新增）。
 //
-// 为什么需要它：一个上游网关往往配了多把密钥，每把密钥能用的模型不同、
-// 进货价也不同。在本项目的模型里，这些差异只能靠「一把密钥 = 一条渠道」来表达，
-// 于是新建渠道的重复劳动量很大。本接口接受一个数组，一次建完。
+// 为什么需要它：一个上游网关往往配了多把密钥；同一把密钥也可能对应不同模型、
+// 不同进货价。本接口接受一个数组，一次建完多条渠道，避免逐条手工创建。
+// 若多把密钥的模型与进价完全一致，把它们换行放进**同一个 item** 即可合并成一条渠道，
+// 由调度层轮询使用（英伟达几百把免费密钥即属此类）。
 //
 // 约定：
-//   - 单个 item 的 key 里可以换行放多把密钥，会被拆成多条渠道（与单条新增行为一致）；
+//   - 单个 item 的 key 里可以换行放多把密钥，会**合并进同一条渠道**，
+//     由调度层轮询使用（见 model/channel_key.go）；
 //   - cost_ratio 是渠道级上游进价 JSON，落库后立即刷新计费侧缓存；
 //   - 任一条校验不过就整体拒绝，避免「导入一半」这种难收拾的中间状态。
 func BatchAddChannels(c *gin.Context) {
@@ -133,38 +136,38 @@ func BatchAddChannels(c *gin.Context) {
 			weight = &zero
 		}
 
-		// 一把密钥一条渠道；item.key 里换行会被拆开（与单条新增行为一致）
-		for _, key := range strings.Split(item.Key, "\n") {
-			key = strings.TrimSpace(key)
-			if key == "" {
-				continue
-			}
-			baseURLValue := baseURL
-			modelMapping := item.ModelMapping
-			systemPrompt := item.SystemPrompt
-			name := item.Name
-			if name == "" {
-				name = key
-			}
-			channels = append(channels, model.Channel{
-				Type:         channelType,
-				Key:          key,
-				Status:       model.ChannelStatusEnabled,
-				Name:         name,
-				CreatedTime:  now,
-				BaseURL:      &baseURLValue,
-				Models:       models,
-				Group:        group,
-				Priority:     priority,
-				Weight:       weight,
-				Balance:      item.Balance,
-				ModelMapping: &modelMapping,
-				SystemPrompt: &systemPrompt,
-				CostRatio:    item.CostRatio,
-				PlanType:     item.PlanType,
-				PlanExpireAt: item.PlanExpireAt,
-			})
+		// 一个 item = 一条渠道。item.key 里的多行密钥**合并进同一条渠道**，
+		// 由调度层轮询使用（见 model/channel_key.go）——
+		// 这是「英伟达这类一个上游几百把免费密钥」场景的正确表达方式。
+		joinedKeys := strings.Join(model.SplitChannelKeys(item.Key), "\n")
+		if joinedKeys == "" {
+			continue
 		}
+		name := item.Name
+		if name == "" {
+			name = fmt.Sprintf("导入渠道 %d", idx+1)
+		}
+		baseURLValue := baseURL
+		modelMapping := item.ModelMapping
+		systemPrompt := item.SystemPrompt
+		channels = append(channels, model.Channel{
+			Type:         channelType,
+			Key:          joinedKeys,
+			Status:       model.ChannelStatusEnabled,
+			Name:         name,
+			CreatedTime:  now,
+			BaseURL:      &baseURLValue,
+			Models:       models,
+			Group:        group,
+			Priority:     priority,
+			Weight:       weight,
+			Balance:      item.Balance,
+			ModelMapping: &modelMapping,
+			SystemPrompt: &systemPrompt,
+			CostRatio:    item.CostRatio,
+			PlanType:     item.PlanType,
+			PlanExpireAt: item.PlanExpireAt,
+		})
 	}
 	if len(channels) == 0 {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "所有条目都没有有效密钥"})

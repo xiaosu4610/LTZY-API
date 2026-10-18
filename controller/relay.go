@@ -72,7 +72,7 @@ func Relay(c *gin.Context) {
 		if upstreamErr := controller.PassthroughUpstreamError(c); upstreamErr != nil {
 			metrics.RecordRelay(channelId, false)
 			metrics.SetRelayLastFail(channelId, upstreamErr.Error.Message)
-			go processChannelRelayError(ctx, userId, channelId, c.GetString(ctxkey.ChannelName), *upstreamErr)
+			go processChannelRelayError(ctx, userId, channelId, c.GetString(ctxkey.ChannelName), c.GetString(ctxkey.ChannelKey), *upstreamErr)
 			return
 		}
 		monitor.Emit(channelId, true)
@@ -85,7 +85,7 @@ func Relay(c *gin.Context) {
 	channelName := c.GetString(ctxkey.ChannelName)
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
-	go processChannelRelayError(ctx, userId, channelId, channelName, *bizErr)
+	go processChannelRelayError(ctx, userId, channelId, channelName, c.GetString(ctxkey.ChannelKey), *bizErr)
 	requestId := c.GetString(helper.RequestIdKey)
 	retryTimes := config.RetryTimes
 	if !shouldRetry(c, bizErr.StatusCode) {
@@ -117,7 +117,7 @@ func Relay(c *gin.Context) {
 		channelId := c.GetInt(ctxkey.ChannelId)
 		lastFailedChannelId = channelId
 		channelName := c.GetString(ctxkey.ChannelName)
-		go processChannelRelayError(ctx, userId, channelId, channelName, *bizErr)
+		go processChannelRelayError(ctx, userId, channelId, channelName, c.GetString(ctxkey.ChannelKey), *bizErr)
 	}
 	if bizErr != nil {
 		if bizErr.StatusCode == http.StatusTooManyRequests {
@@ -151,11 +151,21 @@ func shouldRetry(c *gin.Context, statusCode int) bool {
 	return true
 }
 
-func processChannelRelayError(ctx context.Context, userId int, channelId int, channelName string, err model.ErrorWithStatusCode) {
+func processChannelRelayError(ctx context.Context, userId int, channelId int, channelName string, channelKey string, err model.ErrorWithStatusCode) {
 	// 上游报错原文经常把密钥/令牌一起回显（且会随自动禁用通知发到邮件与 IM），
 	// 所以进日志与进监控前先做一次凭据脱敏。
 	safeMessage := common.MaskString(err.Message)
 	logger.Errorf(ctx, "relay error (channel id %d, user id: %d): %s", channelId, userId, safeMessage)
+	// 多密钥渠道（LTZY-API 新增）：把出问题的这一把密钥单独冷却，同渠道其它密钥不受影响。
+	// 401/403 判定为这把密钥失效，冷却久一点；429 多半只是这把被限流，冷却一分钟即可。
+	if channelKey != "" {
+		switch err.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden:
+			dbmodel.MarkChannelKeyFailed(channelId, channelKey, dbmodel.KeyCooldownAuthFailed)
+		case http.StatusTooManyRequests:
+			dbmodel.MarkChannelKeyFailed(channelId, channelKey, dbmodel.KeyCooldownRateLimited)
+		}
+	}
 	// https://platform.openai.com/docs/guides/error-codes/api-errors
 	if monitor.ShouldDisableChannel(&err.Error, err.StatusCode) {
 		monitor.DisableChannel(channelId, channelName, safeMessage)

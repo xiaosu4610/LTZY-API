@@ -48,6 +48,11 @@ type Channel struct {
 	PlanType string `json:"plan_type" gorm:"type:varchar(32);default:''"`
 	// PlanExpireAt 订阅到期时间（Unix 秒，0 表示未知/不适用）
 	PlanExpireAt int64 `json:"plan_expire_at" gorm:"bigint;default:0"`
+	// 以下两个字段不落库，只在接口返回时填充，用于展示「多密钥」的实时状态。
+	// KeyCount 该渠道包含多少把密钥（Key 字段按行拆分）。
+	KeyCount int `json:"key_count" gorm:"-"`
+	// KeyCooling 当前处于冷却期的密钥数（报过 401/403/429 被临时跳过）。
+	KeyCooling int `json:"key_cooling" gorm:"-"`
 }
 
 const (

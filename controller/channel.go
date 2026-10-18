@@ -27,6 +27,9 @@ func GetAllChannels(c *gin.Context) {
 		})
 		return
 	}
+	// 多密钥渠道（LTZY-API 新增）：补上「共几把密钥 / 当前几把在冷却」供前端展示。
+	// 这两个字段不落库，只在返回前计算。
+	model.FillChannelKeyStats(channels)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -45,6 +48,7 @@ func SearchChannels(c *gin.Context) {
 		})
 		return
 	}
+	model.FillChannelKeyStats(channels)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -179,17 +183,18 @@ func AddChannel(c *gin.Context) {
 		return
 	}
 	channel.CreatedTime = helper.GetTimestamp()
-	keys := strings.Split(channel.Key, "\n")
-	channels := make([]model.Channel, 0, len(keys))
-	for _, key := range keys {
-		if key == "" {
-			continue
-		}
-		localChannel := channel
-		localChannel.Key = key
-		channels = append(channels, localChannel)
+	// 多密钥（LTZY-API 改）：Key 字段里的多行密钥**不再拆成多条渠道**，
+	// 而是存进同一条渠道、由调度层轮询使用。拆成多条会让「英伟达 500 把密钥」
+	// 变成 500 条渠道，模型列表要重复维护几百遍，渠道页也没法看。
+	channel.Key = strings.Join(model.SplitChannelKeys(channel.Key), "\n")
+	if channel.Key == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "密钥不能为空",
+		})
+		return
 	}
-	err = model.BatchInsertChannels(channels)
+	err = model.BatchInsertChannels([]model.Channel{channel})
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
