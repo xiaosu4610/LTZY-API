@@ -303,3 +303,33 @@ func AutomaticallyTestChannels(frequency int) {
 		logger.SysLog("channel test finished")
 	}
 }
+
+// StartChannelKeepAlive 渠道保活检测（LTZY-API 新增）。
+//
+// 目的：被自动禁用（或人工禁用）的渠道，在上游恢复后能自动救活，不必等管理员发现。
+// 范围与周期都可在「系统设置」里配置，默认 scope=disabled（只测已禁用的渠道），
+// 这样既能把误杀/临时故障的渠道救回来，又不会对全部渠道做周期性打点。
+// testChannels 里已有「原本禁用 + 本次测通 → EnableChannel」的逻辑，这里只负责定时触发。
+func StartChannelKeepAlive() {
+	if !config.ChannelKeepAliveEnabled {
+		return
+	}
+	minutes := config.ChannelKeepAliveMinutes
+	if minutes <= 0 {
+		minutes = 10
+	}
+	scope := config.ChannelKeepAliveScope
+	if scope != "all" {
+		scope = "disabled"
+	}
+	logger.SysLog(fmt.Sprintf("channel keep-alive enabled: every %d min, scope=%s", minutes, scope))
+	ctx := context.Background()
+	go func() {
+		for {
+			time.Sleep(time.Duration(minutes) * time.Minute)
+			logger.SysLog("channel keep-alive check started")
+			_ = testChannels(ctx, false, scope)
+			logger.SysLog("channel keep-alive check finished")
+		}
+	}()
+}

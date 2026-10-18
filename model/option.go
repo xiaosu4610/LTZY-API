@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -45,6 +46,23 @@ func InitOptionMap() {
 	config.OptionMap["PasswordRegisterEnabled"] = strconv.FormatBool(config.PasswordRegisterEnabled)
 	config.OptionMap["EmailVerificationEnabled"] = strconv.FormatBool(config.EmailVerificationEnabled)
 	config.OptionMap["EmailCodeLoginEnabled"] = strconv.FormatBool(config.EmailCodeLoginEnabled)
+	// 渠道自动禁用语义与保活检测（LTZY-API 新增）
+	config.OptionMap["RateLimitStatusCodes"] = config.RateLimitStatusCodes
+	config.OptionMap["ChannelKeepAliveEnabled"] = strconv.FormatBool(config.ChannelKeepAliveEnabled)
+	config.OptionMap["ChannelKeepAliveMinutes"] = strconv.Itoa(config.ChannelKeepAliveMinutes)
+	config.OptionMap["ChannelKeepAliveScope"] = config.ChannelKeepAliveScope
+	// 易支付在线充值（LTZY-API 新增）
+	config.OptionMap["EpayEnabled"] = strconv.FormatBool(config.EpayEnabled)
+	config.OptionMap["EpayApiUrl"] = config.EpayApiUrl
+	config.OptionMap["EpayPid"] = config.EpayPid
+	config.OptionMap["EpayMerchantPrivateKey"] = ""
+	config.OptionMap["EpayPlatformPublicKey"] = ""
+	config.OptionMap["EpaySignType"] = config.EpaySignType
+	config.OptionMap["EpayDefaultType"] = config.EpayDefaultType
+	config.OptionMap["EpayMinTopup"] = strconv.FormatFloat(config.EpayMinTopup, 'f', -1, 64)
+	config.OptionMap["EpaySitename"] = config.EpaySitename
+	// 渠道预设（LTZY-API 新增）：留空使用内置预设；填写后整体覆盖，便于上游模型变动时自助维护
+	config.OptionMap["ChannelPresets"] = ""
 	config.OptionMap["GitHubOAuthEnabled"] = strconv.FormatBool(config.GitHubOAuthEnabled)
 	config.OptionMap["OidcEnabled"] = strconv.FormatBool(config.OidcEnabled)
 	config.OptionMap["WeChatAuthEnabled"] = strconv.FormatBool(config.WeChatAuthEnabled)
@@ -298,6 +316,10 @@ func applyOptionToRuntime(key string, value string) (err error) {
 			config.EmailVerificationEnabled = boolValue
 		case "EmailCodeLoginEnabled":
 			config.EmailCodeLoginEnabled = boolValue
+		case "ChannelKeepAliveEnabled":
+			config.ChannelKeepAliveEnabled = boolValue
+		case "EpayEnabled":
+			config.EpayEnabled = boolValue
 		case "GitHubOAuthEnabled":
 			config.GitHubOAuthEnabled = boolValue
 		case "OidcEnabled":
@@ -432,6 +454,68 @@ func applyOptionToRuntime(key string, value string) (err error) {
 		config.ChatLink = value
 	case "ChannelDisableThreshold":
 		config.ChannelDisableThreshold, _ = strconv.ParseFloat(value, 64)
+	case "RateLimitStatusCodes":
+		// 只允许数字与逗号，避免把 "429/500" 这类笔误写进判断逻辑
+		for _, part := range strings.Split(value, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			if _, parseErr := strconv.Atoi(part); parseErr != nil {
+				err = errors.New("RateLimitStatusCodes 只能是逗号分隔的数字，如 429,503")
+				break
+			}
+		}
+		if err == nil {
+			config.RateLimitStatusCodes = value
+		}
+	case "ChannelKeepAliveMinutes":
+		intValue, parseErr := strconv.Atoi(value)
+		if parseErr != nil {
+			err = errors.New("ChannelKeepAliveMinutes 必须是数字（分钟）")
+			break
+		}
+		config.ChannelKeepAliveMinutes = intValue
+	case "ChannelKeepAliveScope":
+		if value != "all" && value != "disabled" {
+			err = errors.New("ChannelKeepAliveScope 只能是 all 或 disabled")
+			break
+		}
+		config.ChannelKeepAliveScope = value
+	case "EpayApiUrl":
+		config.EpayApiUrl = value
+	case "EpayPid":
+		config.EpayPid = value
+	case "EpayMerchantPrivateKey":
+		config.EpayMerchantPrivateKey = value
+	case "EpayPlatformPublicKey":
+		config.EpayPlatformPublicKey = value
+	case "EpaySignType":
+		upper := strings.ToUpper(strings.TrimSpace(value))
+		if upper != "RSA" && upper != "MD5" {
+			err = errors.New("EpaySignType 只能是 RSA 或 MD5")
+			break
+		}
+		config.EpaySignType = upper
+	case "EpayDefaultType":
+		config.EpayDefaultType = value
+	case "EpaySitename":
+		config.EpaySitename = value
+	case "EpayMinTopup":
+		floatValue, parseErr := strconv.ParseFloat(value, 64)
+		if parseErr != nil || floatValue < 0 {
+			err = errors.New("EpayMinTopup 必须是不小于 0 的数字（元）")
+			break
+		}
+		config.EpayMinTopup = floatValue
+	case "ChannelPresets":
+		// 只做结构校验，真正生效由 channelpreset.All() 在读取时解析
+		if strings.TrimSpace(value) != "" {
+			parsed := []map[string]any{}
+			if parseErr := json.Unmarshal([]byte(value), &parsed); parseErr != nil {
+				err = errors.New("ChannelPresets 必须是 JSON 数组")
+			}
+		}
 	case "QuotaPerUnit":
 		config.QuotaPerUnit, _ = strconv.ParseFloat(value, 64)
 	case "Theme":

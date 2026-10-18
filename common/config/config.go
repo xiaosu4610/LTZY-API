@@ -40,6 +40,37 @@ var EmailVerificationEnabled = false
 // 登录邮箱验证码（LTZY-API 新增）：开启后用户可用「邮箱 + 验证码」免密登录。
 // 与 PasswordLoginEnabled 相互独立，二者可同时开启或分别关闭。
 var EmailCodeLoginEnabled = true
+
+// ---- 渠道自动禁用语义 / 保活检测（LTZY-API 新增）----
+
+// RateLimitStatusCodes 「限流语义」的 HTTP 状态码，逗号分隔（默认 429）。
+// 命中这些状态码时，除非响应体出现明确的「密钥失效 / 欠费」信号，否则不自动禁用渠道。
+// 典型场景：英伟达等免费额度渠道返回 429 只代表「此刻请求过多」，密钥仍然可用，
+// 若按状态码一刀切判死，会把正常渠道误杀。
+var RateLimitStatusCodes = "429"
+
+// ChannelKeepAliveEnabled 渠道保活检测总开关。
+var ChannelKeepAliveEnabled = false
+
+// ChannelKeepAliveMinutes 保活检测周期（分钟），<=0 时按 10 分钟处理。
+var ChannelKeepAliveMinutes = 10
+
+// ChannelKeepAliveScope 保活检测范围：
+//   - disabled：只检测已被自动/手动禁用的渠道，能救活就自动恢复（默认，开销最小）
+//   - all：检测全部渠道
+var ChannelKeepAliveScope = "disabled"
+
+// ---- 易支付（epay）在线充值（LTZY-API 新增）----
+
+var EpayEnabled = false
+var EpayApiUrl = ""             // 网关地址，如 https://xnoo.cn/
+var EpayPid = ""                // 商户 ID
+var EpayMerchantPrivateKey = "" // 商户私钥（PKCS#1 / PKCS#8 均可，带不带 PEM 头尾都行）
+var EpayPlatformPublicKey = ""  // 平台公钥（用于异步通知验签）
+var EpaySignType = "RSA"        // RSA（实际为 SHA256withRSA）/ MD5
+var EpayDefaultType = "alipay"  // 默认支付方式：alipay / wxpay / qqpay
+var EpayMinTopup = 1.0          // 单笔最低充值金额（元）
+var EpaySitename = ""           // 网站名，部分平台要求回传
 var GitHubOAuthEnabled = false
 var OidcEnabled = false
 var WeChatAuthEnabled = false

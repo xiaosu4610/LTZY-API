@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/stores/app';
 import { api } from '@/lib/api';
+import { resetPermissionCache, usePermissions } from '@/lib/permissions';
 import { changeLang } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
@@ -34,56 +36,50 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ReactNode;
-  adminOnly?: boolean;
-  rootOnly?: boolean;
+  /** 需要的权限点；缺省表示所有登录用户可见 */
+  perm?: string;
 }
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const user = useAppStore((s) => s.user);
   const status = useAppStore((s) => s.status);
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
-  const role = user?.role ?? 0;
-  const isAdmin = role >= 10;
-  const isRoot = role >= 100;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { hasPerm } = usePermissions();
+
+  // 用户区：所有登录用户可见
+  const userItems: NavItem[] = [
+    { to: '/', label: t('nav.home'), icon: <Globe size={16} /> },
+    { to: '/console', label: t('nav.dashboard'), icon: <LayoutDashboard size={16} /> },
+    { to: '/console/models', label: t('nav.models'), icon: <LayoutGrid size={16} /> },
+    { to: '/console/tokens', label: t('nav.tokens'), icon: <KeyRound size={16} /> },
+    { to: '/console/midjourney', label: t('nav.midjourney'), icon: <Wand2 size={16} /> },
+  ];
+
+  // 管理区：按权限点逐项显隐；无任何管理权限时整块（含标题）不渲染
+  const adminItems: NavItem[] = [
+    { to: '/admin/channels', label: t('nav.channels'), icon: <Server size={16} />, perm: 'channel.read' },
+    { to: '/admin/users', label: t('nav.users'), icon: <Users size={16} />, perm: 'user.read' },
+    { to: '/admin/redemptions', label: t('nav.redemptions'), icon: <Ticket size={16} />, perm: 'redemption.read' },
+    { to: '/admin/logs', label: t('nav.logs'), icon: <ScrollText size={16} />, perm: 'log.read' },
+    { to: '/admin/operations', label: t('nav.operations'), icon: <Activity size={16} />, perm: 'log.read' },
+    { to: '/admin/setting', label: t('nav.setting'), icon: <Settings size={16} />, perm: 'option.read' },
+    { to: '/admin/option-history', label: t('nav.optionHistory'), icon: <History size={16} />, perm: 'option.read' },
+  ].filter((i) => i.perm != null && hasPerm(i.perm));
+
+  // 账户区
+  const accountItems: NavItem[] = [
+    { to: '/console/topup', label: t('nav.topup'), icon: <Wallet size={16} /> },
+    { to: '/console/profile', label: t('nav.profile'), icon: <Coins size={16} /> },
+    { to: '/about', label: t('nav.about'), icon: <BookOpen size={16} /> },
+  ];
 
   const sections: { title?: string; items: NavItem[] }[] = [
-    {
-      items: [
-        { to: '/', label: t('nav.home'), icon: <Globe size={16} /> },
-        { to: '/console', label: t('nav.dashboard'), icon: <LayoutDashboard size={16} /> },
-        { to: '/console/models', label: t('nav.models'), icon: <LayoutGrid size={16} /> },
-        { to: '/console/tokens', label: t('nav.tokens'), icon: <KeyRound size={16} /> },
-        { to: '/console/midjourney', label: t('nav.midjourney'), icon: <Wand2 size={16} /> },
-      ],
-    },
-    {
-      title: 'Admin',
-      items: [
-        { to: '/console/channels', label: t('nav.channels'), icon: <Server size={16} />, adminOnly: true },
-        { to: '/console/users', label: t('nav.users'), icon: <Users size={16} />, adminOnly: true },
-        { to: '/console/redemptions', label: t('nav.redemptions'), icon: <Ticket size={16} />, adminOnly: true },
-        { to: '/console/logs', label: t('nav.logs'), icon: <ScrollText size={16} />, adminOnly: true },
-        { to: '/console/operations', label: t('nav.operations'), icon: <Activity size={16} />, adminOnly: true },
-        { to: '/console/setting', label: t('nav.setting'), icon: <Settings size={16} />, rootOnly: true },
-        { to: '/console/option-history', label: t('nav.optionHistory'), icon: <History size={16} />, rootOnly: true },
-      ],
-    },
-    {
-      items: [
-        { to: '/console/topup', label: t('nav.topup'), icon: <Wallet size={16} /> },
-        { to: '/console/profile', label: t('nav.profile'), icon: <Coins size={16} /> },
-        { to: '/about', label: t('nav.about'), icon: <BookOpen size={16} /> },
-      ],
-    },
-  ].map((s) => ({
-    ...s,
-    items: s.items.filter(
-      (i) => (!i.adminOnly || isAdmin) && (!i.rootOnly || isRoot),
-    ),
-  }));
+    { items: userItems },
+    ...(adminItems.length > 0 ? [{ title: t('nav.adminSection'), items: adminItems }] : []),
+    { items: accountItems },
+  ];
 
   return (
     <aside
@@ -167,6 +163,7 @@ export function Topbar() {
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const quotaPerUnit = useAppStore((s) => s.quotaPerUnit());
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -179,6 +176,9 @@ export function Topbar() {
 
   const signOut = async () => {
     await api.get('/api/user/logout').catch(() => undefined);
+    // 清除权限缓存，避免换号登录后沿用上一账号的菜单权限
+    resetPermissionCache();
+    queryClient.removeQueries({ queryKey: ['permissions'] });
     useAppStore.getState().setUser(null);
     void navigate({ to: '/login' });
   };

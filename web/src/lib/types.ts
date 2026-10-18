@@ -200,6 +200,10 @@ export interface StatusInfo {
   turnstile_check: boolean;
   turnstile_site_key: string;
   top_up_link: string;
+  /** 在线充值（LTZY-API 新增）：易支付是否已开启 */
+  epay_enabled?: boolean;
+  epay_min_topup?: number;
+  epay_default_type?: string;
   chat_link: string;
   quota_per_unit: number;
   display_in_currency: boolean;

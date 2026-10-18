@@ -96,7 +96,7 @@ func RecordConsumeLog(ctx context.Context, log *Log) {
 	// 好处有两个：一处覆盖全部计费模式；成本是「当时」的进价，
 	// 事后改 CostRatio 不会篡改历史账单（否则毛利报表会随配置漂移）。
 	if log.CostQuota == 0 {
-		log.CostQuota = billingratio.CalcCostQuota(log.ModelName, log.PromptTokens, log.CompletionTokens)
+		log.CostQuota = billingratio.CalcCostQuotaForChannel(log.ModelName, log.PromptTokens, log.CompletionTokens, log.ChannelId)
 	}
 	recordLogHelper(ctx, log)
 }

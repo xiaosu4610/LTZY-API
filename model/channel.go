@@ -38,7 +38,24 @@ type Channel struct {
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
+	// CostRatio 渠道级上游进价倍率（LTZY-API 新增，JSON）。
+	// 形如 {"gpt-4o":1.6,"*":2.0}：精确匹配模型名，未命中回退 `*`，
+	// 再未命中则回退到全局 CostRatio。用于表达「同一个模型在不同上游进货价不同」。
+	CostRatio string `json:"cost_ratio" gorm:"type:varchar(1024);default:''"`
+	// PlanType 该渠道密钥的计费形态（LTZY-API 新增）：
+	//   "" 或 payg = 按量付费（默认，余额有意义）
+	//   subscription = 订阅制（Coding Plan / Token Plan 等，余额通常查不到，也不该据此告警）
+	PlanType string `json:"plan_type" gorm:"type:varchar(32);default:''"`
+	// PlanExpireAt 订阅到期时间（Unix 秒，0 表示未知/不适用）
+	PlanExpireAt int64 `json:"plan_expire_at" gorm:"bigint;default:0"`
 }
+
+const (
+	// ChannelPlanPayAsYouGo 按量付费（默认）
+	ChannelPlanPayAsYouGo = "payg"
+	// ChannelPlanSubscription 订阅制（包月/Coding Plan/Token Plan 等）
+	ChannelPlanSubscription = "subscription"
+)
 
 type ChannelConfig struct {
 	Region            string `json:"region,omitempty"`

@@ -36,6 +36,11 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), auth.WeChatBind)
 		apiRouter.GET("/oauth/email/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.EmailBind)
 		apiRouter.POST("/topup", middleware.AdminAuth(), controller.AdminTopUp)
+		// 易支付异步通知 / 同步跳转（LTZY-API 新增）：必须匿名可访问，
+		// 入账只认异步通知，且内部做验签 + 金额校验 + 幂等。
+		apiRouter.POST("/pay/notify", controller.EpayNotify)
+		apiRouter.GET("/pay/notify", controller.EpayNotify)
+		apiRouter.GET("/pay/return", controller.EpayReturn)
 
 		userRoute := apiRouter.Group("/user")
 		{
@@ -55,6 +60,8 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/token", controller.GenerateAccessToken)
 				selfRoute.GET("/aff", controller.GetAffCode)
 				selfRoute.POST("/topup", controller.TopUp)
+				// 在线充值下单（LTZY-API 新增）：需要登录，按会话用户建单
+				selfRoute.POST("/pay", controller.CreatePayOrder)
 				selfRoute.GET("/available_models", controller.GetUserAvailableModels)
 			}
 
@@ -133,6 +140,10 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.GET("/", middleware.PermissionAuth(model.PermChannelRead), controller.GetAllChannels)
 			channelRoute.GET("/search", middleware.PermissionAuth(model.PermChannelRead), controller.SearchChannels)
 			channelRoute.GET("/models", middleware.PermissionAuth(model.PermChannelRead), controller.ListAllModels)
+			// 渠道预设（LTZY-API 新增）：新建渠道时一键带出上游地址与常用模型
+			channelRoute.GET("/presets", middleware.PermissionAuth(model.PermChannelRead), controller.GetChannelPresets)
+			// 批量导入渠道（LTZY-API 新增）：一次建多条（多密钥/多模型/多进价）
+			channelRoute.POST("/batch", middleware.PermissionAuth(model.PermChannelWrite), middleware.AuditAction("channel.batch_import", ""), controller.BatchAddChannels)
 			channelRoute.GET("/health", middleware.PermissionAuth(model.PermChannelRead), controller.GetChannelHealth)
 			channelRoute.GET("/:id", middleware.PermissionAuth(model.PermChannelRead), controller.GetChannel)
 			channelRoute.GET("/test", middleware.PermissionAuth(model.PermChannelTest), controller.TestChannels)

@@ -102,6 +102,54 @@ func GetCostRatio(modelName string) float64 {
 	return 0
 }
 
+// ---- 渠道级进价（LTZY-API 新增）----
+//
+// 场景：同一模型从不同上游渠道进货价不同（例如某模型的官方价与某中转价差一倍），
+// 全局 CostRatio 只能表达「按模型」一个价，无法体现渠道差异。
+//
+// 实现方式：由 model 包在启动时/渠道变更时把「渠道ID → {模型: 倍率}」推进来，
+// 这里只做查询。方向是 model → ratio（model 已经引用 ratio），不会形成 import 环。
+var (
+	channelCostRatioLock sync.RWMutex
+	channelCostRatio     = map[int]map[string]float64{}
+)
+
+// SetChannelCostRatios 全量替换渠道级进价表（由 model 包在渠道数据变化后调用）。
+func SetChannelCostRatios(m map[int]map[string]float64) {
+	channelCostRatioLock.Lock()
+	defer channelCostRatioLock.Unlock()
+	if m == nil {
+		m = map[int]map[string]float64{}
+	}
+	channelCostRatio = m
+}
+
+// GetCostRatioForChannel 取「某渠道下某模型」的进价倍率。
+// 查找顺序：渠道级精确匹配 → 渠道级通配 `*` → 全局 GetCostRatio。
+func GetCostRatioForChannel(modelName string, channelID int) float64 {
+	if channelID > 0 {
+		channelCostRatioLock.RLock()
+		perChannel, ok := channelCostRatio[channelID]
+		channelCostRatioLock.RUnlock()
+		if ok {
+			if ratio, hit := perChannel[modelName]; hit {
+				return ratio
+			}
+			if ratio, hit := perChannel["*"]; hit {
+				return ratio
+			}
+		}
+	}
+	return GetCostRatio(modelName)
+}
+
+// HasChannelCostRatio 是否配置了任何渠道级进价（供热路径短路）。
+func HasChannelCostRatio() bool {
+	channelCostRatioLock.RLock()
+	defer channelCostRatioLock.RUnlock()
+	return len(channelCostRatio) > 0
+}
+
 // HasCostRatio 是否配置了任何进价（用于在结算热路径上做零开销短路）。
 func HasCostRatio() bool {
 	costRatioLock.RLock()
@@ -115,10 +163,19 @@ func HasCostRatio() bool {
 // 这样「收入 − 成本」才是可比的毛利，而不是拿两个不同口径的数字相减。
 // 未配置任何进价时返回 0（"未知成本"，而不是"零成本"）。
 func CalcCostQuota(modelName string, promptTokens int, completionTokens int) int64 {
-	if !HasCostRatio() {
+	return calcCostQuotaWithRatio(modelName, promptTokens, completionTokens, GetCostRatio(modelName))
+}
+
+// CalcCostQuotaForChannel 计算一次消费的上游成本，**优先采用渠道级进价**。
+// 传 channelID<=0 时与 CalcCostQuota 等价。
+func CalcCostQuotaForChannel(modelName string, promptTokens int, completionTokens int, channelID int) int64 {
+	if !HasCostRatio() && !HasChannelCostRatio() {
 		return 0
 	}
-	costRatio := GetCostRatio(modelName)
+	return calcCostQuotaWithRatio(modelName, promptTokens, completionTokens, GetCostRatioForChannel(modelName, channelID))
+}
+
+func calcCostQuotaWithRatio(modelName string, promptTokens int, completionTokens int, costRatio float64) int64 {
 	if costRatio <= 0 {
 		return 0
 	}

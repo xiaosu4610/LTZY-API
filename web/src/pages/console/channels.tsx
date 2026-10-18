@@ -9,6 +9,7 @@ import { formatQuota } from '@/lib/format';
 import { channelTypeName } from '@/lib/channel-types';
 import type { Channel } from '@/lib/types';
 import { CHANNEL_STATUS_ENABLED } from '@/lib/types';
+import { ChannelBatchModal } from './channel-batch-modal';
 import { Button } from '@/components/ui/button';
 import { Badge, Card, Empty, Modal } from '@/components/ui/card';
 import { Field, Input, Textarea } from '@/components/ui/input';
@@ -49,6 +50,7 @@ export default function ChannelsPage() {
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [form, setForm] = useState<ChannelForm>(emptyForm);
   const [testing, setTesting] = useState<number | null>(null);
 
@@ -243,6 +245,9 @@ export default function ChannelsPage() {
                 setPage(1);
               }}
             />
+            <Button variant="secondary" icon={<Plus size={15} />} onClick={() => setBatchOpen(true)}>
+              {t('channelBatch.open')}
+            </Button>
             <Button icon={<Plus size={15} />} onClick={openCreate}>
               {t('common.create')}
             </Button>
@@ -260,6 +265,12 @@ export default function ChannelsPage() {
           </>
         )}
       </Card>
+
+      <ChannelBatchModal
+        open={batchOpen}
+        onClose={() => setBatchOpen(false)}
+        onDone={() => void queryClient.invalidateQueries({ queryKey: ['channels'] })}
+      />
 
       <Modal
         open={modalOpen}

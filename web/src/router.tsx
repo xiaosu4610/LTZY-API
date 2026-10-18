@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/app';
 import { getData } from '@/lib/api';
 import type { StatusInfo, User } from '@/lib/types';
 import { Sidebar, Topbar } from '@/components/layout/shell';
+import { ensurePermission } from '@/lib/permissions';
 import { changeLang, readLang } from '@/i18n';
 
 // ---- 顶层：拉取站点状态与当前登录用户 ----
@@ -73,6 +74,7 @@ import OptionHistoryPage from '@/pages/console/option-history';
 import MidjourneyPage from '@/pages/console/midjourney';
 import ModelsPage from '@/pages/console/models';
 import ProfilePage from '@/pages/console/profile';
+import ForbiddenPage from '@/pages/console/forbidden';
 
 const publicLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -117,8 +119,8 @@ const consoleLayoutRoute = createRoute({
   component: ConsoleLayout,
 });
 
-// 后台子路由统一挂在 /console 前缀下，必须与侧边栏链接（shell.tsx）保持一致，
-// 否则链接会落到 $ 兜底路由，表现为「点哪个页面都提示不存在」。
+// 后台子路由统一挂在 ConsoleLayout（同一套侧边栏 + 顶栏）下，必须与侧边栏链接（shell.tsx）
+// 保持一致，否则链接会落到 $ 兜底路由，表现为「点哪个页面都提示不存在」。
 //
 // 泛型 TPath 不能省：若写成 path: string，TanStack Router 会丢失字面量路径类型，
 // 导致 navigate({ to: '/console' }) 之类调用报「不是合法路由」的类型错误。
@@ -130,19 +132,66 @@ function page<TPath extends string>(path: TPath, component: () => ReactNode) {
   });
 }
 
+// 管理区页面：进入前先校验权限点（在 beforeLoad 里 throw redirect，参考 ensureUser 的写法），
+// 不具备权限时重定向到 403 页面，避免「点进去才被告知没有权限」。
+function adminPage<TPath extends string>(path: TPath, perm: string, component: () => ReactNode) {
+  return createRoute({
+    getParentRoute: () => consoleLayoutRoute,
+    path,
+    beforeLoad: async () => {
+      const allowed = await ensurePermission(perm);
+      if (!allowed) throw redirect({ to: '/forbidden' });
+    },
+    component,
+  });
+}
+
+// 旧 /console/* 管理路径 → 新 /admin/* 的兼容重定向，避免旧书签 404
+type AdminPath =
+  | '/admin/channels'
+  | '/admin/users'
+  | '/admin/redemptions'
+  | '/admin/logs'
+  | '/admin/operations'
+  | '/admin/setting'
+  | '/admin/option-history';
+
+function legacyPage<TPath extends string>(path: TPath, to: AdminPath) {
+  return createRoute({
+    getParentRoute: () => consoleLayoutRoute,
+    path,
+    beforeLoad: () => {
+      throw redirect({ to });
+    },
+  });
+}
+
+// ---- 用户区（所有登录用户，保留在原 /console 路径）----
 const consoleIndexRoute = page('/console', DashboardPage);
 const tokensRoute = page('/console/tokens', TokensPage);
-const channelsRoute = page('/console/channels', ChannelsPage);
-const usersRoute = page('/console/users', UsersPage);
-const logsRoute = page('/console/logs', LogsPage);
-const operationsRoute = page('/console/operations', OperationsPage);
-const redemptionsRoute = page('/console/redemptions', RedemptionsPage);
-const topupRoute = page('/console/topup', TopupPage);
-const settingRoute = page('/console/setting', SettingPage);
-const optionHistoryRoute = page('/console/option-history', OptionHistoryPage);
 const midjourneyRoute = page('/console/midjourney', MidjourneyPage);
 const modelsRoute = page('/console/models', ModelsPage);
+const topupRoute = page('/console/topup', TopupPage);
 const profileRoute = page('/console/profile', ProfilePage);
+const forbiddenRoute = page('/forbidden', ForbiddenPage);
+
+// ---- 管理区（迁到 /admin 前缀，逐个权限点控制）----
+const channelsRoute = adminPage('/admin/channels', 'channel.read', ChannelsPage);
+const usersRoute = adminPage('/admin/users', 'user.read', UsersPage);
+const redemptionsRoute = adminPage('/admin/redemptions', 'redemption.read', RedemptionsPage);
+const logsRoute = adminPage('/admin/logs', 'log.read', LogsPage);
+const operationsRoute = adminPage('/admin/operations', 'log.read', OperationsPage);
+const settingRoute = adminPage('/admin/setting', 'option.read', SettingPage);
+const optionHistoryRoute = adminPage('/admin/option-history', 'option.read', OptionHistoryPage);
+
+// ---- 旧 /console/* 管理路径重定向 ----
+const legacyChannelsRoute = legacyPage('/console/channels', '/admin/channels');
+const legacyUsersRoute = legacyPage('/console/users', '/admin/users');
+const legacyRedemptionsRoute = legacyPage('/console/redemptions', '/admin/redemptions');
+const legacyLogsRoute = legacyPage('/console/logs', '/admin/logs');
+const legacyOperationsRoute = legacyPage('/console/operations', '/admin/operations');
+const legacySettingRoute = legacyPage('/console/setting', '/admin/setting');
+const legacyOptionHistoryRoute = legacyPage('/console/option-history', '/admin/option-history');
 
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -159,19 +208,30 @@ const routeTree = rootRoute.addChildren([
     resetRoute,
   ]),
   consoleLayoutRoute.addChildren([
+    // 用户区
     consoleIndexRoute,
     tokensRoute,
-    channelsRoute,
-    usersRoute,
-    logsRoute,
-    operationsRoute,
-    redemptionsRoute,
-    topupRoute,
-    settingRoute,
-    optionHistoryRoute,
     midjourneyRoute,
     modelsRoute,
+    topupRoute,
     profileRoute,
+    forbiddenRoute,
+    // 管理区
+    channelsRoute,
+    usersRoute,
+    redemptionsRoute,
+    logsRoute,
+    operationsRoute,
+    settingRoute,
+    optionHistoryRoute,
+    // 旧路径重定向
+    legacyChannelsRoute,
+    legacyUsersRoute,
+    legacyRedemptionsRoute,
+    legacyLogsRoute,
+    legacyOperationsRoute,
+    legacySettingRoute,
+    legacyOptionHistoryRoute,
   ]),
   notFoundRoute,
 ]);

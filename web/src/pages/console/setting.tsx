@@ -50,6 +50,22 @@ const OPTION_LABELS: Record<string, { label: string; desc?: string; multiline?: 
   DefaultUserDailyQuotaLimit: { label: '新用户每日额度上限', desc: '0 表示不限制' },
   DefaultUserMonthlyQuotaLimit: { label: '新用户每月额度上限', desc: '0 表示不限制' },
   RolePermissions: { label: '角色权限表', desc: 'JSON，留空使用内置默认权限', multiline: true },
+  // 渠道自动禁用语义与保活（LTZY-API 新增）
+  RateLimitStatusCodes: { label: '限流状态码', desc: '逗号分隔。命中这些状态码时，只有响应体明确表示「密钥失效/欠费」才会禁用渠道；英伟达等渠道 429 只是限流，不会判死（默认 429）' },
+  ChannelKeepAliveEnabled: { label: '渠道保活检测', desc: '开启后定时把「已被禁用但上游已恢复」的渠道自动救回来' },
+  ChannelKeepAliveMinutes: { label: '保活检测周期（分钟）', desc: '默认 10 分钟' },
+  ChannelKeepAliveScope: { label: '保活检测范围', desc: 'disabled = 只测已禁用的渠道（推荐，开销小）；all = 测全部渠道' },
+  ChannelPresets: { label: '渠道预设', desc: 'JSON 数组，留空使用内置预设；填写则整体覆盖，用于自助维护上游地址与常用模型', multiline: true },
+  // 在线充值（LTZY-API 新增）
+  EpayEnabled: { label: '在线充值（易支付）', desc: '开启后充值页出现「在线充值」，用户可直接在线支付' },
+  EpayApiUrl: { label: '易支付网关地址', desc: '例如 https://xnoo.cn/（不带 mapi.php）' },
+  EpayPid: { label: '易支付商户 ID' },
+  EpayMerchantPrivateKey: { label: '易支付商户私钥', desc: '敏感信息，仅管理员可见；用于下单签名。支持 PKCS#8/PKCS#1，带不带 PEM 头尾都行' },
+  EpayPlatformPublicKey: { label: '易支付平台公钥', desc: '用于异步通知验签。强烈建议填写，否则无法验证通知真伪' },
+  EpaySignType: { label: '签名算法', desc: 'RSA（实际为 SHA256withRSA）或 MD5，按支付平台文档选择' },
+  EpayDefaultType: { label: '默认支付方式', desc: 'alipay / wxpay / qqpay' },
+  EpayMinTopup: { label: '单笔最低充值（元）', desc: '低于该金额的充值请求会被拒绝' },
+  EpaySitename: { label: '网站名称（回传给支付平台）', desc: '部分平台要求，可留空' },
 };
 
 const GROUP_KEYS: Record<string, string[]> = {
@@ -76,6 +92,24 @@ const GROUP_KEYS: Record<string, string[]> = {
     'RolePermissions',
   ],
   '运行与调度': ['MemoryCacheEnabled', 'CanaryEnabled', 'CanaryChannelId', 'CanaryPercent', 'CanaryGroups'],
+  '渠道与限流': [
+    'RateLimitStatusCodes',
+    'ChannelKeepAliveEnabled',
+    'ChannelKeepAliveMinutes',
+    'ChannelKeepAliveScope',
+    'ChannelPresets',
+  ],
+  '在线充值': [
+    'EpayEnabled',
+    'EpayApiUrl',
+    'EpayPid',
+    'EpayMerchantPrivateKey',
+    'EpayPlatformPublicKey',
+    'EpaySignType',
+    'EpayDefaultType',
+    'EpayMinTopup',
+    'EpaySitename',
+  ],
   '通知渠道': ['WebhookURL', 'LarkWebhookURL', 'DingTalkWebhookURL', 'DingTalkSecret', 'SlackWebhookURL'],
   'Midjourney': ['MidjourneyEnabled', 'MidjourneyApiKey'],
 };

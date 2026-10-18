@@ -37,6 +37,10 @@ func GetStatus(c *gin.Context) {
 			"turnstile_check":             config.TurnstileCheckEnabled,
 			"turnstile_site_key":          config.TurnstileSiteKey,
 			"top_up_link":                 config.TopUpLink,
+			// 在线充值（LTZY-API 新增）：前端据此决定是否显示「在线充值」区域
+			"epay_enabled":      config.EpayEnabled,
+			"epay_min_topup":    config.EpayMinTopup,
+			"epay_default_type": config.EpayDefaultType,
 			"chat_link":                   config.ChatLink,
 			"quota_per_unit":              config.QuotaPerUnit,
 			"display_in_currency":         config.DisplayInCurrencyEnabled,

@@ -63,6 +63,8 @@ func main() {
 
 	// Initialize options
 	model.InitOptionMap()
+	// 渠道级上游进价（LTZY-API 新增）：必须在计费开始前装载，否则前几笔消费会按全局进价记账
+	model.RefreshChannelCostRatios()
 	logger.SysLog(fmt.Sprintf("using theme %s", config.Theme))
 	if common.RedisEnabled {
 		// for compatibility with old versions
@@ -92,6 +94,9 @@ func main() {
 	if config.EnableMetric {
 		logger.SysLog("metric enabled, will disable channel if too much request failed")
 	}
+	// 渠道保活检测（LTZY-API 新增）：定时把「已禁用但上游已恢复」的渠道自动救回，
+	// 周期与范围由 ChannelKeepAliveEnabled / ChannelKeepAliveMinutes / ChannelKeepAliveScope 控制。
+	controller.StartChannelKeepAlive()
 	// 用量/成本告警（LTZY-API 新增，D6）：阈值未配置时不启动，零开销
 	monitor.StartUsageAlert()
 	openai.InitTokenEncoders()

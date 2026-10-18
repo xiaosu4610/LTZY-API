@@ -184,6 +184,10 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}
+	// 在线充值订单（LTZY-API 新增）：易支付 epay 的订单与幂等入账依据
+	if err = DB.AutoMigrate(&PayOrder{}); err != nil {
+		return err
+	}
 	return nil
 }
 

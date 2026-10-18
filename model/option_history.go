@@ -62,6 +62,10 @@ func IsSensitiveOptionKey(key string) bool {
 	if strings.HasSuffix(key, "Token") || strings.HasSuffix(key, "Secret") {
 		return true
 	}
+	// 私钥一律不回显（EpayMerchantPrivateKey 等）；公钥可回显，方便管理员核对。
+	if strings.HasSuffix(key, "PrivateKey") {
+		return true
+	}
 	switch key {
 	case "TurnstileSecretKey", "MidjourneyApiKey":
 		return true
