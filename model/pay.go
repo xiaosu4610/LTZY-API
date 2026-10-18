@@ -24,7 +24,12 @@ type PayOrder struct {
 	TradeNo    string  `json:"trade_no" gorm:"type:varchar(64)"`
 	Amount     float64 `json:"amount"` // 下单金额（元）
 	Quota      int64   `json:"quota"`  // 应付额度（按当前每元额度折算）
-	PayType    string  `json:"pay_type" gorm:"type:varchar(32)"`
+	// 支付渠道费率（LTZY-API 新增）：下单时按渠道费率固化，便于对账与成本核算。
+	// 事后改费率不会篡改历史订单，否则历史毛利会随配置漂移。
+	FeeRate   float64 `json:"fee_rate"`   // 费率，如 0.06 表示 6%
+	FeeAmount float64 `json:"fee_amount"` // 手续费（元）
+	NetAmount float64 `json:"net_amount"` // 实收（元）= Amount - FeeAmount
+	PayType   string  `json:"pay_type" gorm:"type:varchar(32)"`
 	Status     int     `json:"status" gorm:"default:0;index"`
 	CreateTime int64   `json:"create_time" gorm:"bigint"`
 	PayTime    int64   `json:"pay_time" gorm:"bigint;default:0"`

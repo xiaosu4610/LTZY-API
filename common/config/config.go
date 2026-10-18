@@ -71,6 +71,16 @@ var EpaySignType = "RSA"        // RSA（实际为 SHA256withRSA）/ MD5
 var EpayDefaultType = "alipay"  // 默认支付方式：alipay / wxpay / qqpay
 var EpayMinTopup = 1.0          // 单笔最低充值金额（元）
 var EpaySitename = ""           // 网站名，部分平台要求回传
+
+// 支付渠道费率（LTZY-API 新增）：平台/通道抽取的手续费比例。
+// 下单时按费率算出「手续费」与「实收金额」落到订单上，用于成本核算与对账。
+var EpayAlipayFeeRate = 0.05 // 支付宝 5%
+var EpayWxpayFeeRate = 0.06  // 微信 6%
+
+// EpayFeeDeductFromQuota 为 true 时，手续费由用户承担：
+// 充值 100 元、微信 6% → 只到账 94 元对应的额度。
+// 默认 false，即手续费由平台承担，用户实充 100 元就按 100 元到账。
+var EpayFeeDeductFromQuota = false
 var GitHubOAuthEnabled = false
 var OidcEnabled = false
 var WeChatAuthEnabled = false

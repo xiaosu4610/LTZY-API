@@ -41,6 +41,9 @@ func GetStatus(c *gin.Context) {
 			"epay_enabled":      config.EpayEnabled,
 			"epay_min_topup":    config.EpayMinTopup,
 			"epay_default_type": config.EpayDefaultType,
+			// 可用支付渠道及费率（LTZY-API 新增）：前端据此渲染渠道按钮并展示费率
+			"epay_channels":                epayChannels(),
+			"epay_fee_deduct_from_quota":   config.EpayFeeDeductFromQuota,
 			"chat_link":                   config.ChatLink,
 			"quota_per_unit":              config.QuotaPerUnit,
 			"display_in_currency":         config.DisplayInCurrencyEnabled,

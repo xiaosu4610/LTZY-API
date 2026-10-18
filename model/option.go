@@ -61,6 +61,10 @@ func InitOptionMap() {
 	config.OptionMap["EpayDefaultType"] = config.EpayDefaultType
 	config.OptionMap["EpayMinTopup"] = strconv.FormatFloat(config.EpayMinTopup, 'f', -1, 64)
 	config.OptionMap["EpaySitename"] = config.EpaySitename
+	// 支付渠道费率（LTZY-API 新增）
+	config.OptionMap["EpayAlipayFeeRate"] = strconv.FormatFloat(config.EpayAlipayFeeRate, 'f', -1, 64)
+	config.OptionMap["EpayWxpayFeeRate"] = strconv.FormatFloat(config.EpayWxpayFeeRate, 'f', -1, 64)
+	config.OptionMap["EpayFeeDeductFromQuota"] = strconv.FormatBool(config.EpayFeeDeductFromQuota)
 	// 渠道预设（LTZY-API 新增）：留空使用内置预设；填写后整体覆盖，便于上游模型变动时自助维护
 	config.OptionMap["ChannelPresets"] = ""
 	config.OptionMap["GitHubOAuthEnabled"] = strconv.FormatBool(config.GitHubOAuthEnabled)
@@ -320,6 +324,8 @@ func applyOptionToRuntime(key string, value string) (err error) {
 			config.ChannelKeepAliveEnabled = boolValue
 		case "EpayEnabled":
 			config.EpayEnabled = boolValue
+		case "EpayFeeDeductFromQuota":
+			config.EpayFeeDeductFromQuota = boolValue
 		case "GitHubOAuthEnabled":
 			config.GitHubOAuthEnabled = boolValue
 		case "OidcEnabled":
@@ -508,6 +514,20 @@ func applyOptionToRuntime(key string, value string) (err error) {
 			break
 		}
 		config.EpayMinTopup = floatValue
+	case "EpayAlipayFeeRate":
+		rate, parseErr := strconv.ParseFloat(value, 64)
+		if parseErr != nil || rate < 0 || rate >= 1 {
+			err = errors.New("EpayAlipayFeeRate 必须是 0 到 1 之间的小数，如 0.05 表示 5%")
+			break
+		}
+		config.EpayAlipayFeeRate = rate
+	case "EpayWxpayFeeRate":
+		rate, parseErr := strconv.ParseFloat(value, 64)
+		if parseErr != nil || rate < 0 || rate >= 1 {
+			err = errors.New("EpayWxpayFeeRate 必须是 0 到 1 之间的小数，如 0.06 表示 6%")
+			break
+		}
+		config.EpayWxpayFeeRate = rate
 	case "ChannelPresets":
 		// 只做结构校验，真正生效由 channelpreset.All() 在读取时解析
 		if strings.TrimSpace(value) != "" {

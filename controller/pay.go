@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -187,6 +188,67 @@ func generateOutTradeNo() string {
 	return fmt.Sprintf("L%d%s", time.Now().Unix(), hex.EncodeToString(buf))
 }
 
+// EpayChannel 一个可用的支付渠道（含渠道费率）。
+type EpayChannel struct {
+	Type    string  `json:"type"`
+	Name    string  `json:"name"`
+	FeeRate float64 `json:"fee_rate"`
+}
+
+// epayChannels 当前支持的支付渠道：支付宝与微信。费率可后台配置。
+func epayChannels() []EpayChannel {
+	return []EpayChannel{
+		{Type: "alipay", Name: "支付宝", FeeRate: config.EpayAlipayFeeRate},
+		{Type: "wxpay", Name: "微信支付", FeeRate: config.EpayWxpayFeeRate},
+	}
+}
+
+// epayFeeRateFor 取某支付渠道的费率；不支持的渠道返回 false（不猜费率）。
+func epayFeeRateFor(payType string) (float64, bool) {
+	for _, channel := range epayChannels() {
+		if channel.Type == payType {
+			return channel.FeeRate, true
+		}
+	}
+	return 0, false
+}
+
+// roundMoney 保留两位小数，避免浮点误差在金额上累积
+func roundMoney(value float64) float64 {
+	return math.Round(value*100) / 100
+}
+
+// payKind 判断上游返回的支付凭据形态：
+//   - "url"：http/https 收银台地址，可以直接在浏览器打开
+//   - "qrcode"：微信/支付宝的支付串（如 weixin://wxpay/bizpayurl?pr=xxx），
+//     它是「二维码内容」，浏览器直接打开没有意义，必须渲染成二维码给用户扫。
+//
+// 这个区分很关键：微信渠道在 PC 模式下常返回 weixin:// 串而不是页面地址，
+// 若前端一律 window.open，用户会看到一个空白页或报错。
+func payKind(payload string) string {
+	if strings.HasPrefix(payload, "http://") || strings.HasPrefix(payload, "https://") {
+		return "url"
+	}
+	return "qrcode"
+}
+
+// buildCashierURL 拼出 submit.php 的页面跳转地址（收银台）。
+//
+// 用途：当 mapi.php 只给了二维码内容（微信常见）时，改用页面跳转支付 ——
+// 由网关自己的收银台页面把二维码渲染出来，用户扫码即可，前端不需要引入二维码库。
+func buildCashierURL(params map[string]string) string {
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	form := make([]string, 0, len(keys))
+	for _, k := range keys {
+		form = append(form, k+"="+urlQueryEscape(params[k]))
+	}
+	return strings.TrimSuffix(config.EpayApiUrl, "/") + "/submit.php?" + strings.Join(form, "&")
+}
+
 type createPayOrderRequest struct {
 	Amount  float64 `json:"amount"`   // 元
 	PayType string  `json:"type"`     // alipay / wxpay / qqpay，留空用默认
@@ -224,17 +286,34 @@ func CreatePayOrder(c *gin.Context) {
 	if payType == "" {
 		payType = config.EpayDefaultType
 	}
+	feeRate, supported := epayFeeRateFor(payType)
+	if !supported {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "暂不支持该支付方式：" + payType})
+		return
+	}
 	userId := c.GetInt("id")
 	quotaPerUnit := config.QuotaPerUnit
 	if quotaPerUnit <= 0 {
 		quotaPerUnit = 500000
+	}
+	// 手续费与实收：费率在「下单时」固化到订单上，事后改费率不会篡改历史订单
+	feeAmount := roundMoney(req.Amount * feeRate)
+	netAmount := roundMoney(req.Amount - feeAmount)
+	// 默认手续费由平台承担（用户实充多少就按多少到账）；
+	// 打开 EpayFeeDeductFromQuota 后改为用户承担，到账额度按实收金额折算。
+	quotaBase := req.Amount
+	if config.EpayFeeDeductFromQuota {
+		quotaBase = netAmount
 	}
 
 	order := &model.PayOrder{
 		UserId:     userId,
 		OutTradeNo: generateOutTradeNo(),
 		Amount:     req.Amount,
-		Quota:      int64(req.Amount * quotaPerUnit),
+		Quota:      int64(quotaBase * quotaPerUnit),
+		FeeRate:    feeRate,
+		FeeAmount:  feeAmount,
+		NetAmount:  netAmount,
 		PayType:    payType,
 		Status:     model.PayOrderStatusPending,
 	}
@@ -273,13 +352,22 @@ func CreatePayOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
+	// payurl 是「二维码内容」时（微信常见），前端改用收银台页面，由网关渲染二维码
+	kind := payKind(payURL)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
 			"out_trade_no": order.OutTradeNo,
 			"amount":       order.Amount,
+			"pay_type":     order.PayType,
+			"fee_rate":     order.FeeRate,
+			"fee_amount":   order.FeeAmount,
+			"net_amount":   order.NetAmount,
+			"quota":        order.Quota,
 			"payurl":       payURL,
+			"pay_kind":     kind,
+			"cashier_url":  buildCashierURL(params),
 		},
 	})
 	return

@@ -352,6 +352,11 @@ export default {
     payUrlMissing: 'The payment gateway did not return a pay URL, please contact the administrator',
     payOpened: 'Payment page opened, please finish the payment in your browser',
     epayTip: 'The balance is credited automatically after payment (based on the gateway async notification), usually within seconds. Refresh later if it has not arrived.',
+    rateLabel: 'fee {{rate}}',
+    payAmount: 'Payment amount',
+    feeAmount: 'Gateway fee',
+    netAmount: 'Net received',
+    creditedAmount: 'Credited amount',
   },
   setting: {
     title: 'Settings',

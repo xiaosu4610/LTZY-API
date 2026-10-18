@@ -204,6 +204,10 @@ export interface StatusInfo {
   epay_enabled?: boolean;
   epay_min_topup?: number;
   epay_default_type?: string;
+  /** 可用支付渠道及费率（LTZY-API 新增） */
+  epay_channels?: { type: string; name: string; fee_rate: number }[];
+  /** 手续费是否由用户承担（true 时到账额度按实收折算） */
+  epay_fee_deduct_from_quota?: boolean;
   chat_link: string;
   quota_per_unit: number;
   display_in_currency: boolean;

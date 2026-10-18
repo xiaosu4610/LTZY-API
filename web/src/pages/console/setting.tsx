@@ -66,6 +66,9 @@ const OPTION_LABELS: Record<string, { label: string; desc?: string; multiline?: 
   EpayDefaultType: { label: '默认支付方式', desc: 'alipay / wxpay / qqpay' },
   EpayMinTopup: { label: '单笔最低充值（元）', desc: '低于该金额的充值请求会被拒绝' },
   EpaySitename: { label: '网站名称（回传给支付平台）', desc: '部分平台要求，可留空' },
+  EpayAlipayFeeRate: { label: '支付宝费率', desc: '0~1 的小数，0.05 表示 5%。下单时固化到订单，用于核算实收' },
+  EpayWxpayFeeRate: { label: '微信费率', desc: '0~1 的小数，0.06 表示 6%。下单时固化到订单，用于核算实收' },
+  EpayFeeDeductFromQuota: { label: '手续费由用户承担', desc: '关闭（默认）= 用户充 100 到账 100，手续费平台承担；开启 = 按实收金额到账（微信充 100 到账 94）' },
 };
 
 const GROUP_KEYS: Record<string, string[]> = {
@@ -109,6 +112,9 @@ const GROUP_KEYS: Record<string, string[]> = {
     'EpayDefaultType',
     'EpayMinTopup',
     'EpaySitename',
+    'EpayAlipayFeeRate',
+    'EpayWxpayFeeRate',
+    'EpayFeeDeductFromQuota',
   ],
   '通知渠道': ['WebhookURL', 'LarkWebhookURL', 'DingTalkWebhookURL', 'DingTalkSecret', 'SlackWebhookURL'],
   'Midjourney': ['MidjourneyEnabled', 'MidjourneyApiKey'],

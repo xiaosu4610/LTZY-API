@@ -352,6 +352,11 @@ export default {
     payUrlMissing: '支付网关未返回支付地址，请联系管理员',
     payOpened: '已打开支付页面，请在浏览器中完成支付',
     epayTip: '支付完成后额度会自动到账（以支付平台的异步通知为准），通常几秒内完成；如未到账请稍后刷新。',
+    rateLabel: '费率 {{rate}}',
+    payAmount: '支付金额',
+    feeAmount: '手续费（平台通道费）',
+    netAmount: '实收金额',
+    creditedAmount: '预计到账额度',
   },
   setting: {
     title: '系统设置',
