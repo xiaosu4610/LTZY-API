@@ -26,6 +26,7 @@ const OPTION_LABELS: Record<string, { label: string; desc?: string; multiline?: 
   TopUpLink: { label: '充值页面链接', desc: '留空则隐藏在线充值入口' },
   ChatLink: { label: '对话页面链接', desc: '留空则隐藏聊天入口' },
   EmailVerificationEnabled: { label: '邮箱验证', desc: '注册时是否需要邮箱验证码' },
+  EmailCodeLoginEnabled: { label: '邮箱验证码登录', desc: '开启后用户可用「邮箱 + 验证码」免密登录（依赖邮件服务可用）' },
   GitHubOAuthEnabled: { label: 'GitHub 登录', desc: '开启后登录页显示 GitHub 按钮' },
   GitHubClientId: { label: 'GitHub Client ID' },
   GitHubClientSecret: { label: 'GitHub Client Secret', desc: '敏感信息，仅管理员可见' },
@@ -65,6 +66,7 @@ const GROUP_KEYS: Record<string, string[]> = {
   ],
   '登录与安全': [
     'EmailVerificationEnabled',
+    'EmailCodeLoginEnabled',
     'GitHubOAuthEnabled',
     'GitHubClientId',
     'GitHubClientSecret',

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -61,6 +62,63 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
+	SetupLogin(&user, c)
+}
+
+type EmailCodeLoginRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+// LoginByEmailCode 邮箱验证码免密登录（LTZY-API 新增）。
+//
+// 设计要点：
+//   - 与密码登录共用 SetupLogin，会话 / cookie / 后续审计行为完全一致；
+//   - 验证码校验通过后立即销毁（一次性），避免同一码被重放登录；
+//   - 使用独立的 EmailCodeLoginPurpose，注册码与重置码都不能拿来登录。
+func LoginByEmailCode(c *gin.Context) {
+	if !config.EmailCodeLoginEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"message": i18n.Translate(c, "user.email_code_login_disabled"),
+			"success": false,
+		})
+		return
+	}
+	var req EmailCodeLoginRequest
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": i18n.Translate(c, "invalid_parameter"),
+			"success": false,
+		})
+		return
+	}
+	email := strings.TrimSpace(req.Email)
+	code := strings.TrimSpace(req.Code)
+	if email == "" || code == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"message": i18n.Translate(c, "invalid_parameter"),
+			"success": false,
+		})
+		return
+	}
+	if !common.VerifyCodeWithKey(email, code, common.EmailCodeLoginPurpose) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": i18n.Translate(c, "user.verification_code_invalid"),
+			"success": false,
+		})
+		return
+	}
+	user := model.User{Email: email}
+	// FillUserByEmail 查不到时不报错，必须再用 Id 判断一次
+	_ = user.FillUserByEmail()
+	if user.Id == 0 || user.Status != model.UserStatusEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"message": i18n.Translate(c, "auth.user_banned"),
+			"success": false,
+		})
+		return
+	}
+	common.DeleteKey(email, common.EmailCodeLoginPurpose)
 	SetupLogin(&user, c)
 }
 

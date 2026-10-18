@@ -6,28 +6,72 @@ import { Github } from 'lucide-react';
 import { getData, mutate } from '@/lib/api';
 import { useAppStore } from '@/stores/app';
 import type { User } from '@/lib/types';
+import { cn } from '@/lib/cn';
 import { AuthShell } from './auth-shell';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
+
+type LoginMode = 'password' | 'code';
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const status = useAppStore((s) => s.status);
+  const [mode, setMode] = useState<LoginMode>('password');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [pending, setPending] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const onSubmit = async (e: FormEvent) => {
+  const codeLoginEnabled = Boolean(status?.email_code_login);
+
+  /** 登录成功后统一收尾：拉取本人信息、写入 store、跳转控制台 */
+  const afterLogin = async () => {
+    const user = await getData<User>('/api/user/self');
+    useAppStore.getState().setUser(user);
+    toast.success(t('auth.signInSuccess'));
+    void navigate({ to: '/console' });
+  };
+
+  const onSubmitPassword = async (e: FormEvent) => {
     e.preventDefault();
     if (!username || !password) return;
     setPending(true);
     try {
       await mutate('/api/user/login', 'post', { username, password });
-      const user = await getData<User>('/api/user/self');
-      useAppStore.getState().setUser(user);
-      toast.success(t('auth.signInSuccess'));
-      void navigate({ to: '/console' });
+      await afterLogin();
+    } catch {
+      // 错误提示已由 axios 拦截器统一弹出
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const sendCode = async () => {
+    if (!email) {
+      toast.error(t('auth.emailRequired'));
+      return;
+    }
+    setSending(true);
+    try {
+      await mutate(`/api/verification/login?email=${encodeURIComponent(email)}`, 'get');
+      toast.success(t('auth.codeSent'));
+    } catch {
+      // 错误提示已由 axios 拦截器统一弹出
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onSubmitCode = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email || !code) return;
+    setPending(true);
+    try {
+      await mutate('/api/user/login/email', 'post', { email, code });
+      await afterLogin();
     } catch {
       // 错误提示已由 axios 拦截器统一弹出
     } finally {
@@ -51,6 +95,8 @@ export default function LoginPage() {
     }
   };
 
+  const showCodeForm = codeLoginEnabled && mode === 'code';
+
   return (
     <AuthShell
       title={t('auth.signInTitle')}
@@ -64,34 +110,84 @@ export default function LoginPage() {
         </>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Field label={t('auth.username')}>
-          <Input
-            autoFocus
-            autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="admin"
-          />
-        </Field>
-        <Field label={t('auth.password')}>
-          <Input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-          />
-        </Field>
-        <div className="flex items-center justify-between text-xs">
-          <Link to="/reset" className="text-[var(--ltzy-muted)] hover:text-[var(--ltzy-primary)]">
-            {t('auth.forgotPassword')}
-          </Link>
+      {codeLoginEnabled ? (
+        <div className="mb-4 flex gap-0.5 rounded-lg border border-[var(--ltzy-border)] p-0.5 text-xs">
+          {(['password', 'code'] as LoginMode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={cn(
+                'flex-1 rounded-md py-1.5 transition-colors',
+                mode === m
+                  ? 'bg-[var(--ltzy-primary)]/12 font-medium text-[var(--ltzy-primary)]'
+                  : 'text-[var(--ltzy-muted)] hover:text-[var(--ltzy-fg)]',
+              )}
+            >
+              {m === 'password' ? t('auth.passwordLogin') : t('auth.emailCodeLogin')}
+            </button>
+          ))}
         </div>
-        <Button type="submit" className="w-full" size="lg" loading={pending}>
-          {t('auth.signIn')}
-        </Button>
-      </form>
+      ) : null}
+
+      {showCodeForm ? (
+        <form onSubmit={onSubmitCode} className="space-y-4">
+          <Field label={t('auth.email')}>
+            <Input
+              autoFocus
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </Field>
+          <Field label={t('auth.verificationCode')} hint={t('auth.codeSpamHint')}>
+            <div className="flex gap-2">
+              <Input
+                autoComplete="one-time-code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+              <Button type="button" variant="secondary" onClick={() => void sendCode()} loading={sending}>
+                {t('auth.sendCode')}
+              </Button>
+            </div>
+          </Field>
+          <Button type="submit" className="w-full" size="lg" loading={pending}>
+            {t('auth.signIn')}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={onSubmitPassword} className="space-y-4">
+          <Field label={t('auth.username')}>
+            <Input
+              autoFocus
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="admin"
+            />
+          </Field>
+          <Field label={t('auth.password')}>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+          <div className="flex items-center justify-between text-xs">
+            <Link to="/reset" className="text-[var(--ltzy-muted)] hover:text-[var(--ltzy-primary)]">
+              {t('auth.forgotPassword')}
+            </Link>
+          </div>
+          <Button type="submit" className="w-full" size="lg" loading={pending}>
+            {t('auth.signIn')}
+          </Button>
+        </form>
+      )}
 
       {status?.github_oauth || status?.lark_client_id ? (
         <div className="mt-5">

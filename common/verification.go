@@ -15,6 +15,8 @@ type verificationValue struct {
 const (
 	EmailVerificationPurpose = "v"
 	PasswordResetPurpose     = "r"
+	// 登录邮箱验证码（LTZY-API 新增）：与注册/重置分开，避免验证码跨场景复用
+	EmailCodeLoginPurpose = "l"
 )
 
 var verificationMutex sync.Mutex

@@ -6,6 +6,7 @@
   "send_email_failed": "发送邮件失败：",
 
   "user.password_login_disabled": "管理员关闭了密码登录",
+  "user.email_code_login_disabled": "管理员未开启邮箱验证码登录",
   "user.session_save_failed": "无法保存会话信息，请重试",
   "user.password_register_disabled": "管理员关闭了通过密码进行注册，请使用第三方账户验证的形式进行注册",
   "user.email_verification_required": "管理员开启了邮箱验证，请输入邮箱地址和验证码",

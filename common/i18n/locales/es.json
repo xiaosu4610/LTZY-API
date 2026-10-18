@@ -6,6 +6,7 @@
   "send_email_failed": "[es] failed to send email: ",
 
   "user.password_login_disabled": "[es] Password login has been disabled by the administrator",
+  "user.email_code_login_disabled": "[es] Email code login has been disabled by the administrator",
   "user.session_save_failed": "[es] Failed to save the session, please try again",
   "user.password_register_disabled": "[es] Password registration has been disabled by the administrator, please register with a third-party account",
   "user.email_verification_required": "[es] Email verification is enabled, please enter your email address and verification code",

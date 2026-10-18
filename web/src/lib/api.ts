@@ -84,8 +84,8 @@ export async function deleteData<T>(url: string): Promise<T> {
   return res.data.data as T;
 }
 
-/** 只关心 success/message 的写操作 */
-export async function mutate(url: string, method: 'post' | 'put' | 'delete', body?: unknown) {
+/** 只关心 success/message 的写操作（也允许 get —— 后端有些「发信」类接口就是 GET） */
+export async function mutate(url: string, method: 'get' | 'post' | 'put' | 'delete', body?: unknown) {
   const res = await api.request<ApiResponse>({ url, method, data: body });
   return res.data;
 }

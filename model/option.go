@@ -44,6 +44,7 @@ func InitOptionMap() {
 	config.OptionMap["PasswordLoginEnabled"] = strconv.FormatBool(config.PasswordLoginEnabled)
 	config.OptionMap["PasswordRegisterEnabled"] = strconv.FormatBool(config.PasswordRegisterEnabled)
 	config.OptionMap["EmailVerificationEnabled"] = strconv.FormatBool(config.EmailVerificationEnabled)
+	config.OptionMap["EmailCodeLoginEnabled"] = strconv.FormatBool(config.EmailCodeLoginEnabled)
 	config.OptionMap["GitHubOAuthEnabled"] = strconv.FormatBool(config.GitHubOAuthEnabled)
 	config.OptionMap["OidcEnabled"] = strconv.FormatBool(config.OidcEnabled)
 	config.OptionMap["WeChatAuthEnabled"] = strconv.FormatBool(config.WeChatAuthEnabled)
@@ -295,6 +296,8 @@ func applyOptionToRuntime(key string, value string) (err error) {
 			config.PasswordLoginEnabled = boolValue
 		case "EmailVerificationEnabled":
 			config.EmailVerificationEnabled = boolValue
+		case "EmailCodeLoginEnabled":
+			config.EmailCodeLoginEnabled = boolValue
 		case "GitHubOAuthEnabled":
 			config.GitHubOAuthEnabled = boolValue
 		case "OidcEnabled":

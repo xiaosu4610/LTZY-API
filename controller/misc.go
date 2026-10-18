@@ -23,6 +23,8 @@ func GetStatus(c *gin.Context) {
 			"version":                     common.Version,
 			"start_time":                  common.StartTime,
 			"email_verification":          config.EmailVerificationEnabled,
+			// 登录邮箱验证码开关（LTZY-API 新增）：前端据此决定是否显示「邮箱验证码登录」页签
+			"email_code_login": config.EmailCodeLoginEnabled,
 			"github_oauth":                config.GitHubOAuthEnabled,
 			"github_client_id":            config.GitHubClientId,
 			"lark_client_id":              config.LarkClientId,
@@ -129,6 +131,71 @@ func SendEmailVerification(c *gin.Context) {
 	)
 	err := message.SendEmail(subject, email, content)
 	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
+	return
+}
+
+// SendEmailLoginCode 发送「登录用」邮箱验证码（LTZY-API 新增）。
+//
+// 与注册验证码（SendEmailVerification）的区别：
+//   - 注册码要求邮箱**未被占用**；登录码要求邮箱**已注册**；
+//   - 两者使用各自独立的 purpose，互不通兑，避免拿注册码去登录。
+func SendEmailLoginCode(c *gin.Context) {
+	if !config.EmailCodeLoginEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "user.email_code_login_disabled"),
+		})
+		return
+	}
+	email := c.Query("email")
+	if err := common.Validate.Var(email, "required,email"); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "invalid_parameter"),
+		})
+		return
+	}
+	user := model.User{Email: email}
+	// FillUserByEmail 查不到时不报错，必须再用 Id 判断一次
+	_ = user.FillUserByEmail()
+	if user.Id == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "email.not_registered"),
+		})
+		return
+	}
+	if user.Status != model.UserStatusEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "auth.user_banned"),
+		})
+		return
+	}
+	code := common.GenerateVerificationCode(6)
+	common.RegisterVerificationCodeWithKey(email, code, common.EmailCodeLoginPurpose)
+	subject := fmt.Sprintf("%s 登录验证码", config.SystemName)
+	content := message.EmailTemplate(
+		subject,
+		fmt.Sprintf(`
+			<p>您好！</p>
+			<p>您正在使用邮箱验证码登录 %s。</p>
+			<p>您的验证码为：</p>
+			<p style="font-size: 24px; font-weight: bold; color: #333; background-color: #f8f8f8; padding: 10px; text-align: center; border-radius: 4px;">%s</p>
+			<p style="color: #666;">验证码 %d 分钟内有效，如果不是本人操作，请忽略，并留意账号安全。</p>
+		`, config.SystemName, code, common.VerificationValidMinutes),
+	)
+	if err := message.SendEmail(subject, email, content); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),

@@ -37,6 +37,9 @@ var MaxRecentItems = 100
 var PasswordLoginEnabled = true
 var PasswordRegisterEnabled = true
 var EmailVerificationEnabled = false
+// 登录邮箱验证码（LTZY-API 新增）：开启后用户可用「邮箱 + 验证码」免密登录。
+// 与 PasswordLoginEnabled 相互独立，二者可同时开启或分别关闭。
+var EmailCodeLoginEnabled = true
 var GitHubOAuthEnabled = false
 var OidcEnabled = false
 var WeChatAuthEnabled = false

@@ -119,7 +119,10 @@ const consoleLayoutRoute = createRoute({
 
 // 后台子路由统一挂在 /console 前缀下，必须与侧边栏链接（shell.tsx）保持一致，
 // 否则链接会落到 $ 兜底路由，表现为「点哪个页面都提示不存在」。
-function page(path: string, component: () => ReactNode) {
+//
+// 泛型 TPath 不能省：若写成 path: string，TanStack Router 会丢失字面量路径类型，
+// 导致 navigate({ to: '/console' }) 之类调用报「不是合法路由」的类型错误。
+function page<TPath extends string>(path: TPath, component: () => ReactNode) {
   return createRoute({
     getParentRoute: () => consoleLayoutRoute,
     path,

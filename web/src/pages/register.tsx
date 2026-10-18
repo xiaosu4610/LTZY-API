@@ -93,7 +93,7 @@ export default function RegisterPage() {
           <Field label={t('auth.verificationCode')} hint={t('auth.codeSpamHint')}>
             <div className="flex gap-2">
               <Input value={form.code} onChange={set('code')} />
-              <Button variant="secondary" onClick={() => void sendCode()} loading={sending}>
+              <Button type="button" variant="secondary" onClick={() => void sendCode()} loading={sending}>
                 {t('auth.sendCode')}
               </Button>
             </div>

@@ -24,6 +24,8 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/about", controller.GetAbout)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
+		// 登录邮箱验证码（LTZY-API 新增）：与注册验证码分开，要求邮箱已注册
+		apiRouter.GET("/verification/login", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailLoginCode)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)
 		apiRouter.GET("/oauth/github", middleware.CriticalRateLimit(), auth.GitHubOAuth)
@@ -39,6 +41,8 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			userRoute.POST("/register", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.Register)
 			userRoute.POST("/login", middleware.CriticalRateLimit(), controller.Login)
+			// 邮箱验证码免密登录（LTZY-API 新增）
+			userRoute.POST("/login/email", middleware.CriticalRateLimit(), controller.LoginByEmailCode)
 			userRoute.GET("/logout", controller.Logout)
 
 			selfRoute := userRoute.Group("/")

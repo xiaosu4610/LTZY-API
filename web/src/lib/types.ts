@@ -186,6 +186,8 @@ export interface StatusInfo {
   version: string;
   start_time: number;
   email_verification: boolean;
+  /** 是否开启「邮箱验证码登录」（LTZY-API 新增） */
+  email_code_login?: boolean;
   github_oauth: boolean;
   github_client_id: string;
   lark_client_id: string;
