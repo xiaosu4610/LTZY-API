@@ -1,10 +1,16 @@
 package controller
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"math"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/xiaosu4610/LTZY-API/common/config"
 	"github.com/xiaosu4610/LTZY-API/common/ctxkey"
+	"github.com/xiaosu4610/LTZY-API/common/logger"
 	"github.com/xiaosu4610/LTZY-API/model"
 	"github.com/xiaosu4610/LTZY-API/monitor"
 	relay "github.com/xiaosu4610/LTZY-API/relay"
@@ -14,8 +20,6 @@ import (
 	"github.com/xiaosu4610/LTZY-API/relay/channeltype"
 	"github.com/xiaosu4610/LTZY-API/relay/meta"
 	relaymodel "github.com/xiaosu4610/LTZY-API/relay/model"
-	"net/http"
-	"strings"
 )
 
 // https://platform.openai.com/docs/api-reference/models/list
@@ -218,7 +222,7 @@ func GetUserAvailableModels(c *gin.Context) {
 // ModelPlazaItem 模型广场条目（LTZY-API 新增）。
 //
 // 只暴露「能不能用 / 多少钱 / 快不快」，不含渠道明细与任何上游凭据：
-// 这是一个普通登录用户就能访问的页面。
+// 这是一个普通登录用户（以及游客）就能访问的页面。
 type ModelPlazaItem struct {
 	ModelName            string  `json:"model_name"`
 	ChannelCount         int     `json:"channel_count"` // 承载该模型的启用渠道数
@@ -227,31 +231,45 @@ type ModelPlazaItem struct {
 	PromptPricePer1K     float64 `json:"prompt_price_per_1k"`     // 元 / 千输入 token
 	CompletionPricePer1K float64 `json:"completion_price_per_1k"` // 元 / 千输出 token
 	AvgResponseTime      int64   `json:"avg_response_time"`       // 毫秒，-1 表示暂无测速样本
+	AvgTokensPerSecond   float64 `json:"avg_tokens_per_second"`   // 生成速率，-1 表示暂无消费样本
 	SuccessRate          float64 `json:"success_rate"`            // 0~1，-1 表示暂无采样
 	SampleCount          int     `json:"sample_count"`
+	// Health 由成功率推导的可用状态，前端只管展示不用再自己算：
+	//   online   正常（无采样时也按正常展示——渠道在册即代表可调度）
+	//   degraded 波动（成功率 60%~90%）
+	//   unstable 不稳定（成功率低于 60%）
+	Health string `json:"health"`
 }
 
-// GetModelPlaza 模型广场：当前用户分组的可用模型 + 价格 + 健康度。
-//
-// 价格口径与扣费完全一致（都由 RatioScale 换算），避免出现「广场上显示的价
-// 与实际扣费不符」这类最伤信任的问题。
-func GetModelPlaza(c *gin.Context) {
-	ctx := c.Request.Context()
-	userId := c.GetInt(ctxkey.Id)
-	group, err := model.CacheGetUserGroup(userId)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
+const (
+	ModelHealthOnline   = "online"
+	ModelHealthDegraded = "degraded"
+	ModelHealthUnstable = "unstable"
+)
+
+// modelHealth 把成功率折算成展示用状态。无采样（<0）时按正常处理：
+// 「没数据」不应该被渲染成「有故障」，那是最容易误导用户的呈现方式。
+func modelHealth(successRate float64) string {
+	switch {
+	case successRate < 0 || successRate >= 0.9:
+		return ModelHealthOnline
+	case successRate >= 0.6:
+		return ModelHealthDegraded
+	default:
+		return ModelHealthUnstable
 	}
-	models, err := model.CacheGetGroupModels(ctx, group)
+}
+
+// buildModelPlazaItems 组装某个分组的模型广场数据。价格口径与扣费完全一致
+// （都由 RatioScale 换算），避免出现「广场上显示的价与实际扣费不符」这类最伤信任的问题。
+func buildModelPlazaItems(ctx context.Context, group string) ([]ModelPlazaItem, error) {
+	modelNames, err := model.CacheGetGroupModels(ctx, group)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
+		return nil, err
 	}
 	snapshot, err := model.GetModelChannelSnapshot(group)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
+		return nil, err
 	}
 
 	// 渠道实时成功率（未开启指标采集时为空表，前端按「无采样」展示）
@@ -259,13 +277,19 @@ func GetModelPlaza(c *gin.Context) {
 	for _, metric := range monitor.SnapshotMetrics() {
 		metricMap[metric.ChannelId] = metric
 	}
+	// 生成速率取最近 24 小时的消费日志；查不到就不显示，不猜
+	throughputMap, err := model.GetModelThroughput(24 * 3600)
+	if err != nil {
+		logger.SysError("failed to load model throughput: " + err.Error())
+		throughputMap = map[string]float64{}
+	}
 
 	// 每千 token 人民币价 = 倍率 × 货币换算系数 × 1000 / 每单位额度
 	scale := billingratio.RatioScale()
 	yuanPer1KPerRatio := scale * 1000 / config.QuotaPerUnit
 
-	items := make([]ModelPlazaItem, 0, len(models))
-	for _, modelName := range models {
+	items := make([]ModelPlazaItem, 0, len(modelNames))
+	for _, modelName := range modelNames {
 		channelIds := snapshot.Channels[modelName]
 		if len(channelIds) == 0 {
 			continue
@@ -281,6 +305,7 @@ func GetModelPlaza(c *gin.Context) {
 			PromptPricePer1K:     ratio * yuanPer1KPerRatio,
 			CompletionPricePer1K: ratio * completionRatio * yuanPer1KPerRatio,
 			AvgResponseTime:      -1,
+			AvgTokensPerSecond:   -1,
 			SuccessRate:          -1,
 		}
 
@@ -306,9 +331,21 @@ func GetModelPlaza(c *gin.Context) {
 			item.SuccessRate = float64(successWeight) / float64(sampleSum)
 			item.SampleCount = int(sampleSum)
 		}
+		if tps, ok := throughputMap[modelName]; ok && tps > 0 {
+			item.AvgTokensPerSecond = math.Round(tps*10) / 10
+		}
+		item.Health = modelHealth(item.SuccessRate)
 		items = append(items, item)
 	}
+	return items, nil
+}
 
+func respondModelPlaza(c *gin.Context, group string) {
+	items, err := buildModelPlazaItems(c.Request.Context(), group)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -318,4 +355,27 @@ func GetModelPlaza(c *gin.Context) {
 		},
 	})
 	return
+}
+
+// GetModelPlaza 登录用户的模型广场：按该用户所属分组返回。
+func GetModelPlaza(c *gin.Context) {
+	userId := c.GetInt(ctxkey.Id)
+	group, err := model.CacheGetUserGroup(userId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	respondModelPlaza(c, group)
+}
+
+// GetModelPlazaPublic 游客也能看的模型广场，用于站点首页展示。
+//
+// 固定看 default 分组（可用 ?group= 指定），不涉及任何用户私有信息，
+// 因此不需要登录态 —— 首页是公开页面，若这里强制登录，游客就看不到广场了。
+func GetModelPlazaPublic(c *gin.Context) {
+	group := strings.TrimSpace(c.Query("group"))
+	if group == "" {
+		group = "default"
+	}
+	respondModelPlaza(c, group)
 }

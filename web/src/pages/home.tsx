@@ -17,6 +17,7 @@ import { useAppStore } from '@/stores/app';
 import { getData } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/card';
+import { ModelPlaza } from '@/components/model-plaza';
 
 const featureIcons = [
   <Layers key="layers" size={18} />,
@@ -157,6 +158,20 @@ export default function HomePage() {
                 <p className="mt-1.5 text-xs leading-relaxed text-[var(--ltzy-muted)]">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* 模型广场（LTZY-API 新增）：游客也能看，价格/状态/速率全部来自真实数据 */}
+        <section id="models" className="pb-20">
+          <ModelPlaza scope="public" limit={6} />
+          <div className="mt-7 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => (window.location.href = user?.id ? '/console/models' : '/register')}
+            >
+              {user?.id ? t('home.viewAllModels') : t('home.registerToSeeAll')}
+              <ArrowRight size={15} />
+            </Button>
           </div>
         </section>
 

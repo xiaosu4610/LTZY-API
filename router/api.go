@@ -20,6 +20,8 @@ func SetApiRouter(router *gin.Engine) {
 		// 模型广场（LTZY-API 新增）：当前用户分组的可用模型 + 价格 + 健康度。
 		// 走 UserAuth 而非 AdminAuth —— 这是给用户看的「有哪些模型、多少钱、快不快」。
 		apiRouter.GET("/model/plaza", middleware.UserAuth(), controller.GetModelPlaza)
+		// 公开模型广场（LTZY-API 新增）：供站点首页展示，游客也能看（只读 default 分组）
+		apiRouter.GET("/model/plaza/public", controller.GetModelPlazaPublic)
 		apiRouter.GET("/notice", controller.GetNotice)
 		apiRouter.GET("/about", controller.GetAbout)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)

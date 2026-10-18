@@ -275,8 +275,12 @@ export interface ModelPlazaItem {
   prompt_price_per_1k: number;
   completion_price_per_1k: number;
   avg_response_time: number;
+  /** 平均生成速率（tokens/秒），-1 表示暂无消费样本 */
+  avg_tokens_per_second: number;
   success_rate: number;
   sample_count: number;
+  /** 由后端推导的可用状态：online / degraded / unstable */
+  health: 'online' | 'degraded' | 'unstable';
 }
 
 export const LOG_TYPE_ALL = 0;
