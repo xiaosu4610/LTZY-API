@@ -274,12 +274,16 @@ func CreatePayOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "充值金额必须大于 0"})
 		return
 	}
-	if config.EpayMinTopup > 0 && req.Amount < config.EpayMinTopup {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("单笔最低充值 %.2f 元", config.EpayMinTopup)})
-		return
-	}
 	if req.Amount > 1000000 {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "充值金额过大"})
+		return
+	}
+	// 金额归一到两位小数：上游 money 字段就是两位小数，
+	// 若不先归一，用户填 0.015 会出现「本地金额 0.015 / 上游 0.02」，
+	// 异步通知回来时金额一致性校验会判定不一致而拒绝入账。
+	req.Amount = roundMoney(req.Amount)
+	if req.Amount < config.EpayMinTopup {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("单笔最低充值 %.2f 元", config.EpayMinTopup)})
 		return
 	}
 	payType := req.PayType

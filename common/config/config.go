@@ -69,7 +69,8 @@ var EpayMerchantPrivateKey = "" // 商户私钥（PKCS#1 / PKCS#8 均可，带�
 var EpayPlatformPublicKey = ""  // 平台公钥（用于异步通知验签）
 var EpaySignType = "RSA"        // RSA（实际为 SHA256withRSA）/ MD5
 var EpayDefaultType = "alipay"  // 默认支付方式：alipay / wxpay / qqpay
-var EpayMinTopup = 1.0          // 单笔最低充值金额（元）
+// EpayMinTopup 单笔最低充值金额（元）。默认 0.01，即人民币可流通的最小单位。
+var EpayMinTopup = 0.01
 var EpaySitename = ""           // 网站名，部分平台要求回传
 
 // 支付渠道费率（LTZY-API 新增）：平台/通道抽取的手续费比例。

@@ -357,6 +357,7 @@ export default {
     feeAmount: 'Gateway fee',
     netAmount: 'Net received',
     creditedAmount: 'Credited amount',
+    feeOnUs: 'on us',
   },
   setting: {
     title: 'Settings',

@@ -113,7 +113,9 @@ export default function TopupPage() {
     }
   };
 
-  const minTopup = status?.epay_min_topup ?? 1;
+  const minTopup = status?.epay_min_topup ?? 0.01;
+  // 通道费由平台承担时，手续费与实收对用户不产生扣减，界面上划掉以示「与你无关」
+  const feeOnUs = !status?.epay_fee_deduct_from_quota;
 
   return (
     <div>
@@ -201,13 +203,20 @@ export default function TopupPage() {
                   <span>{t('topup.payAmount')}</span>
                   <span className="font-mono">¥{preview.amount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>{t('topup.feeAmount')}</span>
-                  <span className="font-mono">¥{preview.fee.toFixed(2)}</span>
+                <div className={cn('flex justify-between', feeOnUs && 'opacity-60')}>
+                  <span className={cn(feeOnUs && 'line-through')}>{t('topup.feeAmount')}</span>
+                  <span className="flex items-center gap-2">
+                    {feeOnUs ? <span className="text-[10px]">{t('topup.feeOnUs')}</span> : null}
+                    <span className={cn('font-mono', feeOnUs && 'line-through')}>
+                      ¥{preview.fee.toFixed(2)}
+                    </span>
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span>{t('topup.netAmount')}</span>
-                  <span className="font-mono">¥{preview.net.toFixed(2)}</span>
+                <div className={cn('flex justify-between', feeOnUs && 'opacity-60')}>
+                  <span className={cn(feeOnUs && 'line-through')}>{t('topup.netAmount')}</span>
+                  <span className={cn('font-mono', feeOnUs && 'line-through')}>
+                    ¥{preview.net.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between font-medium text-[var(--ltzy-fg)]">
                   <span>{t('topup.creditedAmount')}</span>

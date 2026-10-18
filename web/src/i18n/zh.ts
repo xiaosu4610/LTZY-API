@@ -357,6 +357,7 @@ export default {
     feeAmount: '手续费（平台通道费）',
     netAmount: '实收金额',
     creditedAmount: '预计到账额度',
+    feeOnUs: '平台承担',
   },
   setting: {
     title: '系统设置',

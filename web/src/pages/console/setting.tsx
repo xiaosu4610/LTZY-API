@@ -64,7 +64,7 @@ const OPTION_LABELS: Record<string, { label: string; desc?: string; multiline?: 
   EpayPlatformPublicKey: { label: '易支付平台公钥', desc: '用于异步通知验签。强烈建议填写，否则无法验证通知真伪' },
   EpaySignType: { label: '签名算法', desc: 'RSA（实际为 SHA256withRSA）或 MD5，按支付平台文档选择' },
   EpayDefaultType: { label: '默认支付方式', desc: 'alipay / wxpay / qqpay' },
-  EpayMinTopup: { label: '单笔最低充值（元）', desc: '低于该金额的充值请求会被拒绝' },
+  EpayMinTopup: { label: '单笔最低充值（元）', desc: '默认 0.01（人民币最小单位）。低于该金额的充值请求会被拒绝' },
   EpaySitename: { label: '网站名称（回传给支付平台）', desc: '部分平台要求，可留空' },
   EpayAlipayFeeRate: { label: '支付宝费率', desc: '0~1 的小数，0.05 表示 5%。下单时固化到订单，用于核算实收' },
   EpayWxpayFeeRate: { label: '微信费率', desc: '0~1 的小数，0.06 表示 6%。下单时固化到订单，用于核算实收' },
