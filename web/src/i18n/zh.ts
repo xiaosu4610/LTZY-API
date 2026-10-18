@@ -60,6 +60,7 @@ export default {
     email: '邮箱',
     verificationCode: '验证码',
     sendCode: '发送验证码',
+    codeSpamHint: '没收到？请到「垃圾邮件箱」里找一下，验证码有可能被误判为垃圾邮件',
     forgotPassword: '忘记密码？',
     noAccount: '还没有账号？',
     hasAccount: '已有账号？',

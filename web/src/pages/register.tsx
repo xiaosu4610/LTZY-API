@@ -90,7 +90,7 @@ export default function RegisterPage() {
           <Input type="email" value={form.email} onChange={set('email')} autoComplete="email" />
         </Field>
         {status?.email_verification ? (
-          <Field label={t('auth.verificationCode')}>
+          <Field label={t('auth.verificationCode')} hint={t('auth.codeSpamHint')}>
             <div className="flex gap-2">
               <Input value={form.code} onChange={set('code')} />
               <Button variant="secondary" onClick={() => void sendCode()} loading={sending}>

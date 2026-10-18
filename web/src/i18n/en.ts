@@ -60,6 +60,7 @@ export default {
     email: 'Email',
     verificationCode: 'Code',
     sendCode: 'Send code',
+    codeSpamHint: "Not received? Please check your spam folder — the code may have been flagged",
     forgotPassword: 'Forgot password?',
     noAccount: "Don't have an account?",
     hasAccount: 'Already have an account?',
