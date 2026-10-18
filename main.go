@@ -119,8 +119,15 @@ func main() {
 	if port == "" {
 		port = strconv.Itoa(*common.Port)
 	}
-	logger.SysLogf("server started on http://localhost:%s", port)
-	err = server.Run(":" + port)
+	// LISTEN_HOST 用于限制监听地址：生产环境设为 127.0.0.1 时，应用只对本机开放，
+	// 公网入口统一交给 Nginx（多 IP 场景下无需应用层适配多个网卡）。
+	// 不设置时保持原行为（监听全部网卡），因此不影响本地开发与既有部署。
+	addr := ":" + port
+	if host := os.Getenv("LISTEN_HOST"); host != "" {
+		addr = host + ":" + port
+	}
+	logger.SysLogf("server started on http://%s", addr)
+	err = server.Run(addr)
 	if err != nil {
 		logger.FatalLog("failed to start HTTP server: " + err.Error())
 	}
