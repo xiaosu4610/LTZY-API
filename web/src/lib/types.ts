@@ -225,6 +225,50 @@ export interface DashboardEntry {
   completion_tokens: number;
 }
 
+/** 配置变更历史（E9），对应 GET /api/option/history 的 items */
+export interface OptionHistoryItem {
+  id: number;
+  key: string;
+  old_value: string;
+  new_value: string;
+  is_sensitive: boolean;
+  is_rollback: boolean;
+  operator_id: number;
+  operator_name: string;
+  remark: string;
+  created_at: number;
+}
+
+/** Midjourney 任务（A4），对应 /api/mj/tasks 的 items */
+export interface MidjourneyTask {
+  id: number;
+  user_id: number;
+  action: string;
+  prompt: string;
+  task_id: string;
+  status: number;
+  progress: number;
+  image_url: string;
+  fail_reason: string;
+  submit_time: number;
+  finish_time: number;
+  quota: number;
+  custom_id: string;
+}
+
+/** 模型广场条目，对应 GET /api/model/plaza 的 items */
+export interface ModelPlazaItem {
+  model_name: string;
+  channel_count: number;
+  ratio: number;
+  completion_ratio: number;
+  prompt_price_per_1k: number;
+  completion_price_per_1k: number;
+  avg_response_time: number;
+  success_rate: number;
+  sample_count: number;
+}
+
 export const LOG_TYPE_ALL = 0;
 export const LOG_TYPE_TOPUP = 1;
 export const LOG_TYPE_CONSUME = 2;

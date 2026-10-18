@@ -136,3 +136,68 @@ func GetGroupModels(ctx context.Context, group string) ([]string, error) {
 	sort.Strings(models)
 	return models, err
 }
+
+// ModelChannelSnapshot 「模型 → 该分组下可用渠道」的快照，供模型广场展示健康度。
+//
+// 只取渠道的 id / status / response_time：模型广场是用户可见页面，
+// 绝不能把带 key 的渠道对象带进这条链路。
+type ModelChannelSnapshot struct {
+	// Channels 模型名 → 可用（启用状态）渠道 id 列表
+	Channels map[string][]int
+	// ResponseTime 渠道 id → 最近一次测速耗时（毫秒），0 表示还没测过
+	ResponseTime map[int]int
+}
+
+// GetModelChannelSnapshot 汇总某分组下「每个模型由哪些渠道承载、这些渠道的响应时间」。
+func GetModelChannelSnapshot(group string) (*ModelChannelSnapshot, error) {
+	groupCol := "`group`"
+	trueVal := "1"
+	if common.UsingPostgreSQL {
+		groupCol = `"group"`
+		trueVal = "true"
+	}
+	abilities := make([]Ability, 0)
+	err := DB.Where(groupCol+" = ? and enabled = "+trueVal, group).Find(&abilities).Error
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot := &ModelChannelSnapshot{
+		Channels:     make(map[string][]int, len(abilities)),
+		ResponseTime: map[int]int{},
+	}
+	if len(abilities) == 0 {
+		return snapshot, nil
+	}
+
+	channelIdSet := map[int]bool{}
+	for _, ability := range abilities {
+		channelIdSet[ability.ChannelId] = true
+	}
+	channelIds := make([]int, 0, len(channelIdSet))
+	for id := range channelIdSet {
+		channelIds = append(channelIds, id)
+	}
+
+	channels := make([]Channel, 0, len(channelIds))
+	// Select 限定字段：这条查询不返回 key，避免上游凭据进入内存
+	err = DB.Model(&Channel{}).Select("id", "status", "response_time").
+		Where("id in ?", channelIds).Find(&channels).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, channel := range channels {
+		// 只统计启用渠道：被禁用/自动熔断的渠道不该出现在模型广场的「可用」口径里
+		if channel.Status != ChannelStatusEnabled {
+			continue
+		}
+		snapshot.ResponseTime[channel.Id] = channel.ResponseTime
+	}
+	for _, ability := range abilities {
+		if _, ok := snapshot.ResponseTime[ability.ChannelId]; !ok {
+			continue
+		}
+		snapshot.Channels[ability.Model] = append(snapshot.Channels[ability.Model], ability.ChannelId)
+	}
+	return snapshot, nil
+}

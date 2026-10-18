@@ -8,8 +8,10 @@ import {
   Coins,
   Gauge,
   Globe,
+  History,
   KeyRound,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Menu,
   Moon,
@@ -20,6 +22,7 @@ import {
   Ticket,
   Users,
   Wallet,
+  Wand2,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/app';
 import { api } from '@/lib/api';
@@ -51,7 +54,9 @@ export function Sidebar() {
       items: [
         { to: '/', label: t('nav.home'), icon: <Globe size={16} /> },
         { to: '/console', label: t('nav.dashboard'), icon: <LayoutDashboard size={16} /> },
+        { to: '/console/models', label: t('nav.models'), icon: <LayoutGrid size={16} /> },
         { to: '/console/tokens', label: t('nav.tokens'), icon: <KeyRound size={16} /> },
+        { to: '/console/midjourney', label: t('nav.midjourney'), icon: <Wand2 size={16} /> },
       ],
     },
     {
@@ -63,6 +68,7 @@ export function Sidebar() {
         { to: '/console/logs', label: t('nav.logs'), icon: <ScrollText size={16} />, adminOnly: true },
         { to: '/console/operations', label: t('nav.operations'), icon: <Activity size={16} />, adminOnly: true },
         { to: '/console/setting', label: t('nav.setting'), icon: <Settings size={16} />, rootOnly: true },
+        { to: '/console/option-history', label: t('nav.optionHistory'), icon: <History size={16} />, rootOnly: true },
       ],
     },
     {

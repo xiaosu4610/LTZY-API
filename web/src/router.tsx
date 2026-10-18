@@ -69,6 +69,9 @@ import OperationsPage from '@/pages/console/operations';
 import RedemptionsPage from '@/pages/console/redemptions';
 import TopupPage from '@/pages/console/topup';
 import SettingPage from '@/pages/console/setting';
+import OptionHistoryPage from '@/pages/console/option-history';
+import MidjourneyPage from '@/pages/console/midjourney';
+import ModelsPage from '@/pages/console/models';
 import ProfilePage from '@/pages/console/profile';
 
 const publicLayoutRoute = createRoute({
@@ -133,6 +136,9 @@ const operationsRoute = page('/console/operations', OperationsPage);
 const redemptionsRoute = page('/console/redemptions', RedemptionsPage);
 const topupRoute = page('/console/topup', TopupPage);
 const settingRoute = page('/console/setting', SettingPage);
+const optionHistoryRoute = page('/console/option-history', OptionHistoryPage);
+const midjourneyRoute = page('/console/midjourney', MidjourneyPage);
+const modelsRoute = page('/console/models', ModelsPage);
 const profileRoute = page('/console/profile', ProfilePage);
 
 const notFoundRoute = createRoute({
@@ -159,6 +165,9 @@ const routeTree = rootRoute.addChildren([
     redemptionsRoute,
     topupRoute,
     settingRoute,
+    optionHistoryRoute,
+    midjourneyRoute,
+    modelsRoute,
     profileRoute,
   ]),
   notFoundRoute,
