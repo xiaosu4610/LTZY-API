@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>模型广场 · LTZY API</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8fafc; --surface:#ffffff; --surface2:#f1f5f9; --line:#e2e8f0;
+  --text:#0f172a; --muted:#64748b; --dim:#94a3b8;
+  --brand:#2563eb; --brand2:#7c3aed; --ok:#059669;
+}
+body{font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+     background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);flex-shrink:0}
+.nav{display:flex;align-items:center;justify-content:space-between;height:62px}
+.logo{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:650}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 0 12px rgba(37,99,235,.35)}
+.nav-links{display:flex;gap:26px;align-items:center}
+.nav-links a{color:var(--muted);font-size:14px;font-weight:500}
+.nav-links a:hover{color:var(--text);text-decoration:none}
+.nav-links a.on{color:var(--text)}
+/* 登录入口：做成按钮样式，和普通导航区分开 */
+.nav-links a.btn-login{padding:7px 15px;border-radius:8px;font-size:13.5px;
+  border:1px solid var(--line);background:var(--surface2);color:var(--text)}
+.nav-links a.btn-login:hover{background:#e9edf2;border-color:#cbd5e1;color:var(--text)}
+
+main{flex:1;overflow-y:auto}
+.inner{max-width:1080px;margin:0 auto;padding:28px 24px 60px}
+
+/* ── 顶部提示条 ── */
+.banner{border:1px solid rgba(5,150,105,.25);background:linear-gradient(135deg,rgba(5,150,105,.08),rgba(5,150,105,.03));
+  border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start}
+.banner .ico{font-size:19px;line-height:1.4}
+.banner .txt{flex:1;font-size:14px;color:var(--muted);line-height:1.7}
+.banner .txt b{color:var(--ok);font-weight:600}
+.banner .txt code{background:rgba(15,23,42,.05);padding:1px 6px;border-radius:4px;font-size:12.5px}
+
+/* ── BaseURL 卡 ── */
+.basebox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:20px}
+.basebox .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.basebox .hd h3{font-size:14px;color:var(--muted);font-weight:500}
+.basebox .row{display:flex;gap:10px;align-items:center}
+.basebox input{flex:1;background:#f6f8fa;border:1px solid var(--line);border-radius:8px;
+  padding:11px 14px;color:var(--text);font:13.5px/1.5 ui-monospace,Consolas,monospace;outline:none}
+.basebox input:focus{border-color:var(--brand)}
+.basebox .tip{font-size:12.5px;color:var(--dim);margin-top:10px}
+
+/* 端点列表 */
+.endpoints{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.ep-line{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;flex-wrap:wrap}
+.ep-line code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--text)}
+.ep-desc{flex:1;color:var(--dim);font-size:12px;min-width:180px}
+.ep-badge{font-size:10.5px;padding:2px 8px;border-radius:5px;background:var(--surface2);
+  color:var(--muted);font-weight:600;white-space:nowrap}
+.ep-badge.rec{background:rgba(79,140,255,.16);color:var(--brand)}
+
+.btn{padding:9px 16px;border-radius:8px;font-size:13.5px;font-weight:500;border:1px solid var(--line);
+  background:var(--surface2);color:var(--text);cursor:pointer;transition:.15s;white-space:nowrap}
+.btn:hover{background:#e9edf2}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border:0;color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-ok{background:rgba(52,211,153,.16);border-color:rgba(52,211,153,.35);color:var(--ok)}
+
+/* ── 工具栏 ── */
+.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;position:relative}
+.search input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  padding:10px 14px 10px 38px;color:var(--text);font-size:14px;outline:none}
+.search input:focus{border-color:var(--brand)}
+.search::before{content:'⌕';position:absolute;left:14px;top:8px;color:var(--dim);font-size:17px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{padding:7px 13px;border-radius:8px;font-size:12.5px;border:1px solid var(--line);
+  background:var(--surface);color:var(--muted);cursor:pointer;
+  /* 关键：不换行。否则按钮多的时候中文会被挤成一列一个字 */
+  white-space:nowrap;flex-shrink:0;transition:.15s}
+.filters button:hover{color:var(--text);border-color:#cbd5e1}
+.filters button.on{background:rgba(79,140,255,.15);border-color:rgba(79,140,255,.4);color:var(--brand)}
+
+/* ── 模型卡片 ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:16px 18px;transition:.15s;border-left-width:3px}
+.card:hover{border-color:#cbd5e1;background:#f1f5f9}
+
+/* ── 类别分区 ── */
+.catsec{margin-bottom:36px}
+.catsec:last-child{margin-bottom:8px}
+.cathead{display:flex;align-items:center;gap:10px;margin-bottom:14px;
+  padding-bottom:10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.cathead h2{font-size:16px;font-weight:620;margin:0;letter-spacing:.2px}
+.cathead .cnt{font-size:11.5px;padding:1px 9px;border-radius:20px;
+  background:var(--surface2);color:var(--muted);font-weight:600;line-height:1.7}
+.cathead .cdesc{font-size:12.5px;color:var(--dim);margin-left:auto;text-align:right}
+@media(max-width:640px){ .cathead .cdesc{width:100%;margin-left:0;text-align:left} }
+
+/* 卡片左侧类别色条 */
+.card.cat-chat{border-left-color:#2563eb}
+.card.cat-embedding{border-left-color:#059669}
+.card.cat-rerank{border-left-color:#7c3aed}
+.card.cat-audio{border-left-color:#d97706}
+.card.cat-image{border-left-color:#db2777}
+.card.cat-other{border-left-color:#94a3b8}
+
+/* 非对话模型的端点提示 */
+.ep-tip{font-size:11.5px;color:var(--dim);margin-top:10px;
+  padding-top:10px;border-top:1px dashed var(--line);line-height:1.6}
+.ep-tip code{background:var(--surface2);padding:1px 6px;border-radius:4px;
+  font-size:11px;color:#475569}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.card .name{font-size:14px;font-weight:550;word-break:break-all;line-height:1.5;flex:1;
+  font-family:ui-monospace,Consolas,monospace}
+.card .meta{display:flex;gap:14px;font-size:12px;color:var(--dim);margin-top:10px;flex-wrap:wrap}
+.card .meta span{display:flex;align-items:center;gap:4px}
+.dotok{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
+.tag{font-size:10.5px;padding:2px 8px;border-radius:5px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+.tag.free{background:rgba(52,211,153,.15);color:var(--ok)}
+.tag.vendor{background:rgba(124,92,255,.15);color:#7c3aed;font-weight:500}
+
+/* ── 底部提示 ── */
+.footnote{text-align:center;margin-top:36px;padding:24px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;font-size:13.5px;color:var(--muted);line-height:1.9}
+.footnote b{color:var(--ok)}
+
+/* ── 登录入口 ── */
+.login-entry{text-align:center;margin-top:16px;padding:26px 24px;border:1px solid var(--line);
+  border-radius:12px;background:linear-gradient(135deg,rgba(79,140,255,.05),rgba(124,92,255,.03))}
+.de-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px}
+.de-desc{font-size:13.5px;color:var(--muted);line-height:1.8;max-width:560px;margin:0 auto 18px}
+.de-desc b{color:var(--text);font-weight:600}
+.login-btn{display:inline-block;padding:10px 24px;border-radius:9px;font-size:14px;font-weight:500;
+  background:var(--surface2);border:1px solid var(--line);color:var(--text);transition:.15s}
+.login-btn:hover{background:#e9edf2;border-color:#cbd5e1;text-decoration:none;color:var(--text)}
+
+/* ── 复制提示 ── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:10px 22px;
+  background:#f1f5f9;border:1px solid #cbd5e1;border-radius:9px;font-size:13.5px;z-index:999;
+  box-shadow:0 10px 30px rgba(15,23,42,.07);animation:up .2s ease}
+@keyframes up{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+.empty{padding:60px;text-align:center;color:var(--dim)}
+.loading{padding:60px;text-align:center;color:var(--dim)}
+
+@media(max-width:720px){
+  .nav-links a:not(.on){display:none}
+  .grid{grid-template-columns:1fr}
+  .inner{padding:18px 16px 40px}
+  .banner{flex-direction:column;gap:8px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="/" class="logo" style="color:var(--text);text-decoration:none">
+      <span class="dot"></span> LTZY API
+    </a>
+    <div class="nav-links">
+      <a href="/">首页</a>
+      <a href="/plaza" class="on">模型广场</a>
+      <a href="/login" class="btn-login">登录</a>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="inner">
+
+  <!-- 使用步骤 -->
+  <div class="banner">
+    <div class="ico">✓</div>
+    <div class="txt">
+      <b>注册即用，免费模型不收钱。</b>
+      ① 注册账号 → ② 在控制台创建 API Key → ③ 把下面的 BaseURL 和任意模型 ID 填进客户端。
+      标注「免费」的模型登录后随便调，不扣余额。
+      <a href="/login" style="color:#2563eb;font-weight:600;text-decoration:none">去注册 / 登录 →</a>
+    </div>
+  </div>
+
+  <!-- BaseURL -->
+  <div class="basebox">
+    <div class="hd">
+      <h3>接口地址（BaseURL）· 所有模型共用这一个</h3>
+    </div>
+    <div class="row">
+      <input id="baseUrl" readonly value="加载中…">
+      <button class="btn btn-primary" onclick="copyBase()">复制</button>
+    </div>
+    <div class="tip">
+      填到客户端时，有的软件要求地址末尾带 <code style="background:var(--surface2);padding:1px 5px;border-radius:4px">/v1</code>，
+      有的会自动补。如果连不上，两种都试试。
+    </div>
+
+    <div class="endpoints">
+      <div class="ep-line">
+        <span class="ep-badge rec">推荐</span>
+        <code>POST /v1/responses</code>
+        <span class="ep-desc">Responses API —— 新一代标准，功能最完整</span>
+        <button class="btn btn-sm btn-ok" onclick="copyEndpoint('/v1/responses')">复制</button>
+      </div>
+      <div class="ep-line">
+        <span class="ep-badge">兼容</span>
+        <code>POST /v1/chat/completions</code>
+        <span class="ep-desc">Chat Completions —— 旧客户端用这个</span>
+        <button class="btn btn-sm" onclick="copyEndpoint('/v1/chat/completions')">复制</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 工具栏 -->
+  <div class="toolbar">
+    <div class="search"><input id="q" placeholder="搜索模型名称或厂商…" autocomplete="off"></div>
+    <div class="filters" id="vendorFilter">
+      <button class="on" data-v="">全部</button>
+    </div>
+  </div>
+
+  <!-- 模型列表 -->
+  <div id="list"><div class="loading">加载中…</div></div>
+
+  <!-- 底部再强调一次 -->
+  <div class="footnote">
+    <div style="font-size:15px;color:var(--text);margin-bottom:10px;font-weight:600">
+      免费模型：<b>登录后不限次数，不扣余额</b>
+    </div>
+    上面标注「免费」的模型，注册登录后不扣费、不限次数。<br>
+    向量、重排、语音、图像模型走各自的专用端点，卡片上标了具体路径，复制即可用。<br>
+    标注「¥x/次」的计费模型按次扣费，余额可在<b>控制台 → 充值</b>里买，充完即用、不用审批。
+  </div>
+
+  <!-- 登录入口说明 -->
+  <div class="login-entry">
+    <div class="de-title">还没有账号？</div>
+    <div class="de-desc">
+      注册只需 10 秒：用户名 + 密码 + 验证码。登录后在控制台创建 API Key，
+      即可调用上方全部模型 —— 免费模型不扣费，计费模型充值后直接用。
+    </div>
+    <a href="/login" class="login-btn">注册 / 登录 →</a>
+  </div>
+
+</div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let all = [];
+let keyword = '';
+let vendor = '';
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+function copy(text, label) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => toast('已复制' + (label ? '：' + label : '')));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('已复制' + (label ? '：' + label : '')); }
+    catch (e) { prompt('手动复制：', text); }
+    ta.remove();
+  }
+}
+
+function copyBase() { copy($('#baseUrl').value, 'BaseURL'); }
+
+function copyEndpoint(path) {
+  const base = $('#baseUrl').value.replace(/\/v1$/, '');
+  copy(base + path, path);
+}
+
+// ── 类别元数据：分区标题、说明、色标 ──
+const CATS = [
+  { k: 'chat',      n: '对话模型',    d: '直接对话，走 /v1/chat/completions 或 /v1/responses', c: '#2563eb' },
+  { k: 'embedding', n: '向量化模型',  d: '文本转向量，走 /v1/embeddings，用于 RAG 与语义检索',  c: '#059669' },
+  { k: 'rerank',    n: '重排序模型',  d: '对检索结果重新打分排序，提升 RAG 精度',              c: '#7c3aed' },
+  { k: 'audio',     n: '语音模型',    d: '语音识别与合成',                                    c: '#d97706' },
+  { k: 'image',     n: '图像模型',    d: '图像生成与理解',                                    c: '#db2777' },
+  { k: 'other',     n: '专业模型',    d: '视觉 / CV / 工具类，按需调用',                      c: '#94a3b8' },
+];
+
+function catMeta(k) {
+  return CATS.find(x => x.k === k) || CATS[CATS.length - 1];
+}
+
+function paint() {
+  const kw = keyword.toLowerCase();
+  const list = all.filter(m =>
+    (vendor === '' || m.vendor === vendor) &&
+    (kw === '' || m.model.toLowerCase().includes(kw) || m.vendor.toLowerCase().includes(kw))
+  );
+
+  if (list.length === 0) {
+    $('#list').innerHTML = '<div class="empty">没有匹配的模型</div>';
+    return;
+  }
+
+  // 按类别分组（保持 CATS 定义的顺序）
+  const groups = new Map();
+  for (const m of list) {
+    const k = m.category || 'other';
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(m);
+  }
+
+  let html = '';
+  for (const c of CATS) {
+    const items = groups.get(c.k);
+    if (!items || items.length === 0) continue;
+
+    html += `<section class="catsec">
+      <div class="cathead">
+        <h2 style="color:${c.c}">${c.n}</h2>
+        <span class="cnt">${items.length}</span>
+        <span class="cdesc">${esc(c.d)}</span>
+      </div>
+      <div class="grid">${items.map(m => {
+        const isChat = (m.category === 'chat' || m.category === 'vision' || !m.category);
+        const id = esc(m.model);
+        return `<div class="card cat-${esc(c.k)}">
+          <div class="top">
+            <div class="name">${id}</div>
+            <span class="tag free">免费</span>
+          </div>
+          <div class="meta">
+            <span class="tag vendor">${esc(m.vendor)}</span>
+            ${isChat ? '<span><i class="dotok"></i>可直接对话</span>'
+                     : '<span>需专用端点</span>'}
+          </div>
+          ${isChat ? '' : `<div class="ep-tip">调用方式：<code>${esc(endpointHint(c.k))}</code></div>`}
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn btn-sm btn-ok" onclick="copy('${id.replace(/'/g, "\\'")}', '${id.replace(/'/g, "\\'")}')">复制模型 ID</button>
+          </div>
+        </div>`;
+      }).join('')}</div>
+    </section>`;
+  }
+
+  $('#list').innerHTML = html;
+}
+
+/** 非对话模型该用什么端点调用 */
+function endpointHint(cat) {
+  switch (cat) {
+    case 'embedding': return 'POST /v1/embeddings';
+    case 'rerank':    return 'rerank 端点（文档见 /api/site）';
+    case 'image':     return 'POST /v1/images/generations';
+    case 'audio':     return 'POST /v1/audio/transcriptions · /v1/audio/speech';
+    default:          return '专用端点（详见 /api/site 的 endpoints）';
+  }
+}
+
+function tryModel(model) {
+  // 跳到首页并预选模型（首页有对话测试区）
+  location.href = '/?model=' + encodeURIComponent(model);
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/model/plaza').then(x => x.json());
+    if (!r.success) { $('#list').innerHTML = '<div class="empty">加载失败</div>'; return; }
+
+    all = r.data.items || [];
+
+    // BaseURL 从 /api/site 拿（和客户端配置保持一致）
+    const site = await fetch('/api/site').then(x => x.json()).catch(() => null);
+    $('#baseUrl').value = site && site.success
+      ? site.data.base_url
+      : location.origin + '/v1';
+
+    // 厂商筛选按钮
+    const vf = $('#vendorFilter');
+    (r.data.vendors || []).forEach(v => {
+      const b = document.createElement('button');
+      b.textContent = `${v.name} (${v.count})`;
+      b.dataset.v = v.name;
+      b.onclick = () => {
+        vf.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        vendor = v.name;
+        paint();
+      };
+      vf.appendChild(b);
+    });
+    vf.querySelector('button[data-v=""]').onclick = () => {
+      vf.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      vf.querySelector('button[data-v=""]').classList.add('on');
+      vendor = '';
+      paint();
+    };
+
+    document.title = `模型广场 · ${all.length} 个免费模型 · LTZY API`;
+    paint();
+  } catch (e) {
+    $('#list').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+$('#q').addEventListener('input', e => { keyword = e.target.value; paint(); });
+load();
+</script>
+</body>
+</html>

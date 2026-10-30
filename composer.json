@@ -1,0 +1,29 @@
+{
+    "name": "ltzy/api",
+    "description": "LLM API gateway: OpenAI/Anthropic/Gemini protocol translation, multi-channel routing, key pooling and usage-based billing",
+    "type": "project",
+    "keywords": ["llm", "api-gateway", "openai", "anthropic", "gemini", "swoole", "relay", "proxy"],
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-curl": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {},
+    "suggest": {
+        "ext-swoole": "常驻内存 HTTP 服务（>=6.0）。不装也能跑，可改用 PHP-FPM",
+        "ext-gd": "生成登录/注册验证码",
+        "ext-openssl": "支付回调验签"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ltzy\\": "app/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

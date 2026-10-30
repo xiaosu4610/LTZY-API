@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>安装向导 · LTZY API</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8fafc;--surface:#fff;--surface2:#f1f5f9;--line:#e2e8f0;--line2:#cbd5e1;
+  --text:#0f172a;--muted:#64748b;--dim:#94a3b8;
+  --brand:#2563eb;--brand2:#7c3aed;--ok:#059669;--warn:#d97706;--err:#dc2626;
+}
+body{font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
+  display:flex;flex-direction:column}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px;width:100%}
+
+/* 顶部 */
+header{padding:36px 0 22px;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:10px;font-size:19px;font-weight:650;letter-spacing:.3px}
+.brand .dot{width:11px;height:11px;border-radius:50%;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 0 14px rgba(37,99,235,.4)}
+.sub{font-size:13px;color:var(--muted);margin-top:8px}
+
+/* 步骤条 */
+.steps{display:flex;align-items:center;justify-content:center;gap:6px;margin:26px 0 30px;flex-wrap:wrap}
+.st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--dim)}
+.st .n{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;
+  background:var(--surface);transition:.2s}
+.st.on{color:var(--brand);font-weight:600}
+.st.on .n{border-color:var(--brand);background:rgba(37,99,235,.1);color:var(--brand)}
+.st.done{color:var(--ok)}
+.st.done .n{border-color:var(--ok);background:rgba(5,150,105,.1);color:var(--ok)}
+.st .ln{width:26px;height:1px;background:var(--line2);margin:0 4px}
+
+/* 面板 */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:30px 32px;box-shadow:0 10px 34px rgba(15,23,42,.05);margin-bottom:22px}
+.panel h2{font-size:18px;font-weight:650;margin-bottom:6px;letter-spacing:-.2px}
+.panel .desc{font-size:13.5px;color:var(--muted);margin-bottom:22px}
+
+/* 表单 */
+.row{margin-bottom:16px}
+.row label{display:block;font-size:13px;font-weight:550;color:var(--muted);margin-bottom:7px}
+.row label .req{color:var(--err);margin-left:3px}
+.row .hint{font-size:12px;color:var(--dim);margin-top:6px}
+input[type=text],input[type=password],input[type=number],input[type=url]{
+  width:100%;padding:10px 13px;border:1px solid var(--line2);border-radius:8px;
+  font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;
+  transition:.15s}
+input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+input:disabled{background:var(--surface2);color:var(--dim)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:2fr 1fr 1.2fr;gap:14px}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* 环境检查项 */
+.envlist{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:10px;overflow:hidden}
+.envitem{display:flex;align-items:center;gap:12px;background:var(--surface);padding:11px 15px;font-size:13.5px}
+.envitem .ico{width:18px;text-align:center;flex-shrink:0;font-size:13px}
+.envitem .nm{flex:1;color:var(--text)}
+.envitem .need{font-size:12px;color:var(--dim);min-width:52px}
+.envitem .now{font-size:12.5px;color:var(--muted);min-width:76px;text-align:right;
+  font-family:ui-monospace,Consolas,monospace}
+.envitem.bad{background:rgba(220,38,38,.04)}
+.envitem.bad .now{color:var(--err);font-weight:600}
+.envitem .hint{flex:1;font-size:12px;color:var(--err);text-align:right}
+
+/* 按钮 */
+.actions{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:26px}
+.btn{padding:10px 22px;border-radius:9px;font-size:14px;font-weight:550;border:1px solid var(--line2);
+  background:var(--surface2);color:var(--text);cursor:pointer;transition:.15s;font-family:inherit}
+.btn:hover{background:#e9edf2}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border:0;color:#fff}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+
+/* 提示 */
+.notice{padding:13px 16px;border-radius:9px;font-size:13.5px;line-height:1.7;
+  border:1px solid var(--line);border-left:3px solid var(--warn);background:rgba(217,119,6,.05);margin-bottom:18px}
+.notice.ok{border-left-color:var(--ok);background:rgba(5,150,105,.05)}
+.notice.err{border-left-color:var(--err);background:rgba(220,38,38,.05)}
+.notice b{font-weight:650}
+.notice code{background:rgba(15,23,42,.06);padding:1px 6px;border-radius:4px;font-size:12.5px}
+
+/* 进度结果 */
+.reslist{display:grid;gap:8px;margin-top:18px}
+.resitem{display:flex;gap:10px;font-size:13.5px;color:var(--muted);align-items:flex-start}
+.resitem .ico{color:var(--ok);flex-shrink:0;font-weight:700}
+.resitem.doing .ico{color:var(--brand)}
+.resitem.fail .ico{color:var(--err)}
+
+/* 页脚 */
+footer{margin-top:auto;padding:26px 0 34px;text-align:center;font-size:12.5px;color:var(--dim)}
+footer a{color:var(--muted);text-decoration:none}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(37,99,235,.25);
+  border-top-color:var(--brand);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span> LTZY API</div>
+    <div class="sub">安装向导 · 完成后即可访问站点</div>
+  </header>
+
+  <div class="steps" id="steps">
+    <div class="st on" data-s="1"><span class="n">1</span>环境检查</div><span class="ln"></span>
+    <div class="st" data-s="2"><span class="n">2</span>数据库</div><span class="ln"></span>
+    <div class="st" data-s="3"><span class="n">3</span>站点信息</div><span class="ln"></span>
+    <div class="st" data-s="4"><span class="n">4</span>管理员</div>
+  </div>
+
+  <!-- 步骤 1：环境检查 -->
+  <div class="panel" id="p1">
+    <h2>环境检查</h2>
+    <div class="desc">确认服务器满足运行条件。标红的项需要先解决。</div>
+    <div id="envBox"><div class="desc"><span class="spin"></span> 正在检测…</div></div>
+    <div class="actions">
+      <button class="btn" onclick="recheck()">重新检测</button>
+      <button class="btn btn-primary" id="next1" disabled onclick="go(2)">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- 步骤 2：数据库 -->
+  <div class="panel hide" id="p2">
+    <h2>数据库配置</h2>
+    <div class="desc">
+      本项目<strong>只支持 PostgreSQL</strong>。用的是 <code>DISTINCT ON</code>、
+      <code>ON CONFLICT</code>、部分索引等 PG 专有语法，SQLite / MySQL 跑不起来。
+    </div>
+    <div class="notice">
+      数据库需要<strong>提前创建好</strong>。安装程序只建表，不会替你建库。<br>
+      命令行示例：<code>createdb -U postgres ltzy</code>
+    </div>
+    <div class="grid3">
+      <div class="row"><label>主机地址<span class="req">*</span></label>
+        <input type="text" id="dbHost" value="127.0.0.1"></div>
+      <div class="row"><label>端口<span class="req">*</span></label>
+        <input type="number" id="dbPort" value="5432"></div>
+      <div class="row"><label>数据库名<span class="req">*</span></label>
+        <input type="text" id="dbName" value="ltzy"></div>
+    </div>
+    <div class="grid2">
+      <div class="row"><label>用户名<span class="req">*</span></label>
+        <input type="text" id="dbUser" value="ltzy"></div>
+      <div class="row"><label>密码</label>
+        <input type="password" id="dbPass" autocomplete="new-password"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="go(1)">← 上一步</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="testBtn" onclick="testDb()">测试连接</button>
+        <button class="btn btn-primary" id="next2" onclick="go(3)">下一步 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 步骤 3：站点信息 -->
+  <div class="panel hide" id="p3">
+    <h2>站点信息</h2>
+    <div class="desc">这些内容会显示在前端首页与页头，装完之后也能在管理后台改。</div>
+    <div class="row"><label>站点名称</label>
+      <input type="text" id="siteName" value="LTZY API" placeholder="例如：XX 大模型接口">
+      <div class="hint">出现在浏览器标题、首页 Hero 和页头</div></div>
+    <div class="row"><label>站点地址</label>
+      <input type="url" id="siteUrl" placeholder="https://api.example.com">
+      <div class="hint">用于生成登录链接、支付回调地址。留空则按当前访问地址自动推断</div></div>
+    <div class="row"><label>站点 Logo 地址</label>
+      <input type="text" id="siteLogo" placeholder="/static/logo.png 或 https://...">
+      <div class="hint">可填相对路径或完整 URL。留空用默认文字 Logo</div></div>
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="go(2)">← 上一步</button>
+      <button class="btn btn-primary" onclick="go(4)">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- 步骤 4：管理员 + 执行 -->
+  <div class="panel hide" id="p4">
+    <h2>管理员账户</h2>
+    <div class="desc">这个账号拥有最高权限，可以管理渠道、定价、用户。请务必改掉默认密码。</div>
+    <div class="grid2">
+      <div class="row"><label>用户名<span class="req">*</span></label>
+        <input type="text" id="adminUser" value="root"></div>
+      <div class="row"><label>密码<span class="req">*</span></label>
+        <input type="password" id="adminPass" value="123456" autocomplete="new-password">
+        <div class="hint">至少 6 位</div></div>
+    </div>
+    <div class="grid2">
+      <div class="row"><label>确认密码<span class="req">*</span></label>
+        <input type="password" id="adminPass2" value="123456" autocomplete="new-password"></div>
+    </div>
+    <div class="notice">
+      <b>安装完成后：</b>本页面会自动失效（访问 <code>/install</code> 返回 404），
+      所有前端页面开放访问。若使用 Swoole 常驻服务，需要重启服务让新配置生效。
+    </div>
+    <div id="runResult"></div>
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="go(3)">← 上一步</button>
+      <button class="btn btn-primary" id="runBtn" onclick="doInstall()">开始安装</button>
+    </div>
+  </div>
+
+  <!-- 完成 -->
+  <div class="panel hide" id="p5">
+    <h2 style="color:var(--ok)">✓ 安装完成</h2>
+    <div class="desc">站点已就绪。记得做这两件事：</div>
+    <div class="notice ok">
+      <b>1. 重启服务</b><br>
+      <code>systemctl restart ltzy-api</code>　（若用 PHP-FPM 则 <code>systemctl reload php-fpm</code>）<br>
+      <span style="color:var(--muted)">不重启的话，正在运行的进程还在用旧配置。</span>
+    </div>
+    <div class="notice ok">
+      <b>2. 收好管理员密码</b><br>
+      用户名已按你填的创建。忘记只能进服务器用 <code>php bin/set-admin.php</code> 重置。
+    </div>
+    <div class="actions">
+      <span></span>
+      <a class="btn btn-primary" href="/" style="text-decoration:none">进入站点 →</a>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com" target="_blank" rel="noopener">LTZY API</a> ·
+    安装向导会在完成写入后自动关闭
+  </footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let cur = 1;
+let envPassed = false;
+
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {})
+  });
+  let j = {};
+  try { j = await r.json(); } catch (e) { j = {success: false, message: 'HTTP ' + r.status}; }
+  return {status: r.status, ...j};
+}
+
+/* ── 步骤切换 ── */
+function go(n) {
+  if (n === 2 && !envPassed) return;
+  cur = n;
+  for (let i = 1; i <= 4; i++) {
+    const p = $('#p' + i);
+    if (p) p.classList.toggle('hide', i !== n);
+  }
+  document.querySelectorAll('.st').forEach(el => {
+    const s = +el.dataset.s;
+    el.classList.toggle('on', s === n);
+    el.classList.toggle('done', s < n);
+  });
+  window.scrollTo({top: 0, behavior: 'smooth'});
+
+  // 进入第 3 步时，若站点地址为空，用当前访问地址预填
+  if (n === 3 && !$('#siteUrl').value) {
+    $('#siteUrl').value = location.origin;
+  }
+}
+
+/* ── 环境检查 ── */
+async function recheck() {
+  $('#envBox').innerHTML = '<div class="desc"><span class="spin"></span> 正在检测…</div>';
+  $('#next1').disabled = true;
+  const j = await post('/api/install/check');
+  if (j.status === 404) {
+    $('#envBox').innerHTML = '<div class="notice err">系统已安装完成，安装入口已关闭。</div>';
+    return;
+  }
+  if (!j.success) {
+    $('#envBox').innerHTML = '<div class="notice err">' + esc(j.message || '检测失败') + '</div>';
+    return;
+  }
+  const items = j.items || [];
+  let html = '<div class="envlist">';
+  for (const it of items) {
+    html += `<div class="envitem ${it.ok ? '' : 'bad'}">
+      <span class="ico">${it.ok ? '✓' : '✕'}</span>
+      <span class="nm">${esc(it.name)}</span>
+      <span class="need">${esc(it.need)}</span>
+      <span class="now">${esc(it.now)}</span>
+      ${it.ok ? '' : `<span class="hint">${esc(it.hint || '')}</span>`}
+    </div>`;
+  }
+  html += '</div>';
+  html += `<div style="margin-top:14px;font-size:12.5px;color:var(--dim)">
+    PHP ${esc(j.php)} · SAPI ${esc(j.sapi)}</div>`;
+  $('#envBox').innerHTML = html;
+
+  envPassed = !!j.ok;
+  $('#next1').disabled = !envPassed;
+  if (!envPassed) {
+    $('#envBox').insertAdjacentHTML('beforeend',
+      '<div class="notice err" style="margin-top:16px">有必需项未通过，解决后点「重新检测」</div>');
+  }
+  return j.ok;
+}
+
+/* ── 测试数据库 ── */
+async function testDb() {
+  const body = {
+    host: $('#dbHost').value.trim(),
+    port: +$('#dbPort').value || 5432,
+    database: $('#dbName').value.trim(),
+    username: $('#dbUser').value.trim(),
+    password: $('#dbPass').value
+  };
+  if (!body.database || !body.username) {
+    alert('数据库名和用户名不能为空');
+    return;
+  }
+  const btn = $('#testBtn');
+  btn.disabled = true;
+  btn.textContent = '测试中…';
+  const j = await post('/api/install/test-db', body);
+  btn.disabled = false;
+  btn.textContent = '测试连接';
+
+  const box = document.createElement('div');
+  box.className = 'notice ' + (j.success ? 'ok' : 'err');
+  box.innerHTML = j.success
+    ? '✓ 连接成功　PostgreSQL ' + esc(j.data?.version || '')
+    : '✕ ' + esc(j.message || '连接失败');
+  box.id = 'dbMsg';
+  const old = $('#dbMsg');
+  if (old) old.remove();
+  $('#p2 .desc').insertAdjacentElement('afterend', box);
+}
+
+/* ── 执行安装 ── */
+async function doInstall() {
+  const body = {
+    host: $('#dbHost').value.trim(),
+    port: +$('#dbPort').value || 5432,
+    database: $('#dbName').value.trim(),
+    username: $('#dbUser').value.trim(),
+    password: $('#dbPass').value,
+    site_name: $('#siteName').value.trim(),
+    site_url: $('#siteUrl').value.trim(),
+    site_logo: $('#siteLogo').value.trim(),
+    admin_user: $('#adminUser').value.trim(),
+    admin_pass: $('#adminPass').value
+  };
+
+  if (!$('#adminUser').value.trim()) return alert('管理员用户名不能为空');
+  if (($('#adminPass').value || '').length < 6) return alert('管理员密码至少 6 位');
+  if ($('#adminPass').value !== $('#adminPass2').value) return alert('两次输入的密码不一致');
+  if (!body.database || !body.username) return alert('数据库配置不完整');
+
+  const btn = $('#runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> 安装中…';
+  $('#runResult').innerHTML = '';
+
+  const j = await post('/api/install/run', body);
+
+  btn.disabled = false;
+  btn.textContent = '开始安装';
+
+  if (!j.success) {
+    $('#runResult').innerHTML =
+      '<div class="notice err" style="margin-top:18px"><b>安装失败</b><br>' +
+      esc(j.message || '未知错误') + '</div>';
+    return;
+  }
+
+  // 成功：展示每一步
+  const steps = j.data?.steps || [];
+  let html = '<div class="reslist">';
+  for (const s of steps) {
+    html += `<div class="resitem"><span class="ico">✓</span><span>${esc(s)}</span></div>`;
+  }
+  html += '</div>';
+  $('#runResult').innerHTML = html;
+
+  setTimeout(() => {
+    $('#p4').classList.add('hide');
+    $('#p5').classList.remove('hide');
+    document.querySelectorAll('.st').forEach(el => {
+      el.classList.remove('on');
+      el.classList.add('done');
+    });
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }, 700);
+}
+
+recheck();
+</script>
+</body>
+</html>

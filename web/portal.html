@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LTZY API · 开放的大模型接口服务</title>
+<meta name="description" content="汇聚多个主流大模型，注册即用。免费模型不限次数，OpenAI 兼容接口，复制地址即可调用。">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8fafc; --surface:#ffffff; --surface2:#f1f5f9; --line:#e2e8f0;
+  --text:#0f172a; --muted:#64748b; --dim:#94a3b8;
+  --brand:#2563eb; --brand2:#7c3aed; --ok:#059669; --warn:#d97706;
+}
+body{font:15px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+     background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* ── 顶部导航 ── */
+header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:62px}
+.logo{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:650;letter-spacing:.2px}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 0 12px rgba(37,99,235,.35)}
+.nav-links{display:flex;gap:26px;align-items:center}
+.nav-links a{color:var(--muted);font-size:14px;font-weight:500}
+.nav-links a:hover{color:var(--text);text-decoration:none}
+.nav-links a.on{color:var(--text)}
+.btn{display:inline-block;padding:8px 16px;border-radius:8px;font-size:14px;font-weight:500;
+     border:1px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer;transition:.15s}
+.btn:hover{background:#e9edf2;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border:0;color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-lg{padding:12px 26px;font-size:15px;border-radius:10px}
+
+/* ── Hero ── */
+.hero{padding:88px 0 64px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:-50% 0 auto 0;height:600px;
+  background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(37,99,235,.1),transparent 70%);pointer-events:none}
+.hero h1{font-size:44px;line-height:1.25;font-weight:700;letter-spacing:-.5px;margin-bottom:18px;position:relative}
+.hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--brand),var(--brand2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:17px;color:var(--muted);max-width:620px;margin:0 auto 32px;position:relative}
+.hero-actions{display:flex;gap:14px;justify-content:center;position:relative;flex-wrap:wrap}
+
+/* ── 数据条 ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 72px}
+.stat{background:var(--surface);padding:26px 20px;text-align:center}
+.stat .n{font-size:32px;font-weight:700;letter-spacing:-.5px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat .l{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* ── 区块 ── */
+section{padding:56px 0}
+.sec-head{text-align:center;margin-bottom:40px}
+.sec-head h2{font-size:28px;font-weight:650;letter-spacing:-.3px;margin-bottom:10px}
+.sec-head p{color:var(--muted);font-size:15px}
+
+/* ── 免费模型说明卡 ── */
+.nologin{border:1px solid rgba(5,150,105,.25);background:linear-gradient(135deg,rgba(5,150,105,.07),rgba(5,150,105,.03));
+  border-radius:14px;padding:28px 32px;margin-bottom:32px}
+.nologin h3{font-size:19px;margin-bottom:14px;display:flex;align-items:center;gap:9px}
+.nologin h3 .badge{font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(52,211,153,.16);
+  color:var(--ok);font-weight:600;letter-spacing:.4px}
+.nologin ul{list-style:none;display:grid;gap:9px}
+.nologin li{display:flex;gap:10px;color:var(--muted);font-size:14.5px}
+.nologin li::before{content:'✓';color:var(--ok);font-weight:700;flex-shrink:0}
+.nologin li b{color:var(--text);font-weight:600}
+
+/* ── 步骤 ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px}
+.step .no{width:28px;height:28px;border-radius:8px;background:rgba(79,140,255,.14);color:var(--brand);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin-bottom:14px}
+.step h4{font-size:15.5px;margin-bottom:8px}
+.step p{font-size:13.5px;color:var(--muted);line-height:1.65}
+
+/* ── 代码块 ── */
+pre{background:#f6f8fa;border:1px solid var(--line);border-radius:10px;padding:16px 18px;
+  overflow-x:auto;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;color:#334155;position:relative}
+pre .c{color:#94a3b8}
+pre .s{color:#16a34a}
+.copy-btn{position:absolute;top:10px;right:10px;padding:4px 10px;font-size:11px;border-radius:5px;
+  background:var(--surface2);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.copy-btn:hover{background:#e9edf2;color:var(--text)}
+
+/* ── 厂商标签 ── */
+.vendors{display:flex;flex-wrap:wrap;gap:9px;justify-content:center}
+.vendor{padding:7px 15px;background:var(--surface);border:1px solid var(--line);border-radius:20px;
+  font-size:13px;color:var(--muted)}
+.vendor b{color:var(--text);font-weight:600}
+
+/* ── FAQ ── */
+.faq{display:grid;gap:14px;max-width:760px;margin:0 auto}
+.qa{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 24px}
+.qa h4{font-size:15px;margin-bottom:8px;color:var(--text)}
+.qa p{font-size:13.8px;color:var(--muted);line-height:1.7}
+.qa code{background:var(--surface2);padding:1px 6px;border-radius:4px;font-size:12.5px;color:#334155}
+
+/* ── 页脚 ── */
+footer{border-top:1px solid var(--line);padding:36px 0;margin-top:40px;text-align:center;color:var(--dim);font-size:13px}
+footer a{color:var(--muted)}
+
+@media(max-width:720px){
+  .hero{padding:56px 0 40px}
+  .hero h1{font-size:30px}
+  .hero p{font-size:15px}
+  .nav-links{gap:16px}
+  .nav-links a:not(.btn){display:none}
+}
+
+/* 登录入口按钮 */
+.nav-links a.btn-login{padding:7px 15px;border-radius:8px;font-size:13.5px;
+  border:1px solid var(--line);background:var(--surface2);color:var(--text);text-decoration:none}
+.nav-links a.btn-login:hover{background:#e9edf2;border-color:#cbd5e1;color:var(--text)}
+
+@media(max-width:720px){
+  .nav-links a.btn-login{display:inline-block}
+  .stat .n{font-size:26px}
+  section{padding:40px 0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="/" class="logo" style="color:var(--text);text-decoration:none">
+      <span class="dot"></span> LTZY API
+    </a>
+    <div class="nav-links">
+      <a href="/" class="on">首页</a>
+      <a href="/plaza">模型广场</a>
+      <a href="/login" class="btn-login">登录</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>大模型接口，<em>拿起来就能用</em></h1>
+    <p id="heroDesc">汇聚主流大模型，注册即全量解锁。免费模型不限次、不扣费；计费模型按次扣费，充值即用，接口与 OpenAI 完全一致。</p>
+    <div class="hero-actions">
+      <a href="/plaza" class="btn btn-primary btn-lg">查看模型广场 →</a>
+      <a href="#quickstart" class="btn btn-lg">快速开始</a>
+    </div>
+  </div>
+
+  <!-- 数据条 -->
+  <div class="stats">
+    <div class="stat"><div class="n" id="statModels">—</div><div class="l">免费模型</div></div>
+    <div class="stat"><div class="n" id="statVendors">—</div><div class="l">覆盖厂商</div></div>
+    <div class="stat"><div class="n">免费</div><div class="l">免费模型费用</div></div>
+    <div class="stat"><div class="n">24/7</div><div class="l">服务可用</div></div>
+  </div>
+
+  <!-- 免费模型说明 -->
+  <section style="padding-top:0">
+    <div class="nologin">
+      <h3>注册即解锁全部模型 <span class="badge">免费 + 计费</span></h3>
+      <ul>
+        <li>注册只要 10 秒：<b>用户名 + 密码 + 验证码</b>，不需要邮箱和手机</li>
+        <li>登录后在控制台一键创建 <b>API Key</b>，填进客户端即可</li>
+        <li>免费模型<b>随便调不扣费</b>；计费模型按次扣费（¥0.005 起），充值后<b>自动可用，不需要人工开通</b></li>
+        <li>兼容 OpenAI 接口标准，<b>现有客户端改个地址就能用</b></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 快速开始 -->
+  <section id="quickstart">
+    <div class="sec-head">
+      <h2>三步开始使用</h2>
+      <p>不需要任何技术准备，会用浏览器就能完成</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="no">1</div>
+        <h4>注册并登录</h4>
+        <p>用户名 + 密码 + 验证码，10 秒完成。<a href="/login" style="color:var(--brand)">去注册 →</a></p>
+      </div>
+      <div class="step">
+        <div class="no">2</div>
+        <h4>创建 API Key</h4>
+        <p>登录后进控制台，点「新建密钥」，复制那把 <code style="background:var(--surface2);padding:1px 6px;border-radius:4px">sk-</code> 开头的字符串。</p>
+      </div>
+      <div class="step">
+        <div class="no">3</div>
+        <h4>填进客户端</h4>
+        <p>「API 地址」填下面复制的 BaseURL，「模型」填广场里的模型 ID，「API Key」填上一步的密钥。</p>
+      </div>
+    </div>
+
+    <div style="margin-top:32px">
+      <div class="sec-head" style="margin-bottom:20px">
+        <h2 style="font-size:20px">接口调用示例</h2>
+        <p style="margin-top:8px">推荐使用 <b style="color:var(--brand)">Responses API</b>（OpenAI 新一代接口标准）</p>
+      </div>
+      <pre id="curlExample"><button class="copy-btn" onclick="copyText(document.getElementById('curlExample').dataset.raw)">复制</button><span id="curlText">加载中…</span></pre>
+
+      <div style="margin-top:20px">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+          也可以用传统的 <b style="color:var(--text)">Chat Completions</b>（兼容旧客户端）：
+        </div>
+        <pre id="chatExample"><button class="copy-btn" onclick="copyText(document.getElementById('chatExample').dataset.raw)">复制</button><span id="chatText"></span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 厂商 -->
+  <section>
+    <div class="sec-head">
+      <h2>覆盖的主流厂商</h2>
+      <p id="vendorNote">持续接入中</p>
+    </div>
+    <div class="vendors" id="vendorList"></div>
+  </section>
+
+  <!-- FAQ -->
+  <section>
+    <div class="sec-head">
+      <h2>常见问题</h2>
+    </div>
+    <div class="faq">
+      <div class="qa">
+        <h4>真的要填密钥吗？</h4>
+        <p>要。所有接口都需要密钥，格式是 <code>Authorization: Bearer sk-你的密钥</code>，和 OpenAI 完全一致。密钥在控制台「API 密钥」页一键创建；免费模型不扣余额，可以先随便试。</p>
+      </div>
+      <div class="qa">
+        <h4>计费模型要另外申请吗？</h4>
+        <p>不用。注册登录后，免费模型和计费模型全部自动解锁。计费模型按次扣费（¥0.005 起），控制台充值后直接用，不需要任何人审批。</p>
+      </div>
+      <div class="qa">
+        <h4>有什么限制吗？</h4>
+        <p>免费模型由公共资源池提供，高峰时段可能有排队。请不要用于大规模批量任务或商业化转售。</p>
+      </div>
+      <div class="qa">
+        <h4>支持哪些客户端？</h4>
+        <p>所有兼容 OpenAI 接口的都能用：NextChat、Cherry Studio、ChatBox、LobeChat、沉浸式翻译、各类 IDE 插件等。</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    LTZY API
+    <br>
+    <span style="margin-top:8px;display:inline-block">
+      <a href="/plaza">模型广场</a> ·
+      <a href="/api/status" target="_blank">服务状态</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(
+    () => toast('已复制'),
+    () => { prompt('手动复制：', t); }
+  );
+}
+function toast(msg) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);padding:10px 20px;' +
+    'background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 8px 24px rgba(15,23,42,.06)';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1800);
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/site').then(x => x.json());
+    if (!r.success) return;
+    const d = r.data;
+
+    $('#statModels').textContent = d.free_models;
+    $('#statVendors').textContent = d.vendor_count;
+    $('#heroDesc').textContent = d.brand.intro;
+
+    // 厂商标签
+    $('#vendorList').innerHTML = d.vendors.map(v =>
+      `<span class="vendor"><b>${esc(v.name)}</b> ${v.count} 个</span>`
+    ).join('');
+    $('#vendorNote').textContent = `已接入 ${d.vendor_count} 家厂商，共 ${d.free_models} 个免费模型`;
+
+    // 示例代码
+    const ep = d.endpoints[0];
+    const host = d.base_url.replace(/\/v1$/, '');
+    const sampleModel = '选择一个模型 ID';
+
+    const rawResponses = `curl ${host}/v1/responses \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -d '{"model":"${sampleModel}","input":"你好"}'`;
+    $('#curlExample').dataset.raw = rawResponses;
+    $('#curlText').innerHTML = esc(rawResponses);
+
+    const rawChat = `curl ${host}/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -d '{"model":"${sampleModel}","messages":[{"role":"user","content":"你好"}]}'`;
+    $('#chatExample').dataset.raw = rawChat;
+    $('#chatText').innerHTML = esc(rawChat);
+  } catch (e) {
+    console.error(e);
+  }
+}
+load();
+</script>
+</body>
+</html>
