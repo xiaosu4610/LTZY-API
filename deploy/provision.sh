@@ -15,9 +15,9 @@ set -euo pipefail
 
 PHP_VER="${PHP_VER:-8.5}"
 DOMAIN="${DOMAIN:-_}"
-APP_DIR="${APP_DIR:-/opt/ltzy}"
-DB_USER="${DB_USER:-ltzy}"
-DB_NAME="${DB_NAME:-ltzy}"
+APP_DIR="${APP_DIR:-/opt/llm-gateway}"
+DB_USER="${DB_USER:-llm_gateway}"
+DB_NAME="${DB_NAME:-llm_gateway}"
 
 log()  { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[1;32m✓\033[0m %s\n' "$*"; }
@@ -84,11 +84,11 @@ systemctl enable --now postgresql
 PG_CONF=$(ls -1 /etc/postgresql/*/main/postgresql.conf 2>/dev/null | head -1)
 if [[ -n "${PG_CONF}" ]]; then
     # 先删掉可能存在的旧配置块，避免重复追加
-    sed -i '/^# === LTZY TUNING ===/,/^# === LTZY TUNING END ===/d' "${PG_CONF}"
+    sed -i '/^# === APP TUNING ===/,/^# === APP TUNING END ===/d' "${PG_CONF}"
     cat >> "${PG_CONF}" <<'PGTUNE'
 
-# === LTZY TUNING ===
-# 2C2G 小机器：PG 给 256MB 共享缓冲，够这个规模（266 账号 + 百级模型）
+# === APP TUNING ===
+# 2C2G 小机器：PG 给 256MB 共享缓冲，够小规模部署使用
 max_connections = 100
 shared_buffers = 256MB
 effective_cache_size = 512MB
@@ -103,7 +103,7 @@ checkpoint_completion_target = 0.9
 default_statistics_target = 100
 # 关掉不需要的日志，省 IO
 log_min_duration_statement = 1000
-# === LTZY TUNING END ===
+# === APP TUNING END ===
 PGTUNE
     ok "PostgreSQL 已按 2C2G 调参：$(basename $(dirname $(dirname "${PG_CONF}")))"
 fi
@@ -211,7 +211,7 @@ ok "pdo/pdo_pgsql/pgsql/curl/json/mbstring/openssl/sockets/zlib/intl/swoole 全�
 # ── 5. nginx ──────────────────────────────────────────────
 log "5/5 nginx 反代"
 apt-get -y -qq install nginx
-cat > /etc/nginx/sites-available/ltzy <<NGINX
+cat > /etc/nginx/sites-available/llm-gateway <<NGINX
 server {
     listen 80;
     server_name ${DOMAIN};
@@ -244,7 +244,7 @@ server {
 }
 NGINX
 
-ln -sf /etc/nginx/sites-available/ltzy /etc/nginx/sites-enabled/ltzy
+ln -sf /etc/nginx/sites-available/llm-gateway /etc/nginx/sites-enabled/llm-gateway
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 ok "nginx 配置已就位（server_name=${DOMAIN}）"
@@ -256,7 +256,7 @@ cat <<'SUMMARY'
 下一步（在本地做完再上传）：
 
   1. 把上面打印的数据库密码写进 config/database.php
-  2. rsync 上传代码到 /opt/ltzy
+  2. rsync 上传代码到 /opt/llm-gateway
   3. bash deploy/release.sh        # 建目录、装 systemd、跑迁移、自检
   4. 配 HTTPS：certbot --nginx -d 你的域名
 

@@ -62,7 +62,7 @@ function probeCreate(string $prefix = 'probe', int $quotaYuan = 10, int $role = 
 
     // 用户名带随机后缀，避免并发跑测试时撞 primary key
     $username = $prefix . '_' . bin2hex(random_bytes(4));
-    $password = 'Probe' . bin2hex(random_bytes(6));
+    $password = bin2hex(random_bytes(8)) . 'Aa1!';
 
     // cost 必须和线上一致（12），否则登录耗时会和真实用户不同，
     // 测出来的时序数据没有参考价值。

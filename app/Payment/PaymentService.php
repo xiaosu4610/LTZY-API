@@ -189,7 +189,7 @@ final class PaymentService
             'out_trade_no' => $orderNo,
             'notify_url'   => $p['notify_url'] !== '' ? $p['notify_url'] : ($p['site_url'] ?? '') . '/api/recharge/notify',
             'return_url'   => $p['return_url'] !== '' ? $p['return_url'] : ($p['site_url'] ?? '') . '/console.html?tab=recharge',
-            'name'         => 'LTZY API 余额充值',
+            'name'         => '账户余额充值',
             'money'        => number_format($amountCents / 100, 2, '.', ''),
 
             // 实测（2026-10-29）：xnoo.cn 的 mapi.php 强制要求 clientip，
@@ -396,7 +396,7 @@ final class PaymentService
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_USERAGENT      => 'ltzy-api/2.0',
+            CURLOPT_USERAGENT      => 'llm-gateway/1.0',
         ]);
 
         $body = curl_exec($ch);

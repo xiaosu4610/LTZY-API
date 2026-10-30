@@ -5,16 +5,16 @@
 # 用法：
 #   bash deploy/release.sh                 # 首次部署：建库表、装服务、启动、自检
 #   bash deploy/release.sh --no-migrate    # 只重启，不碰数据库
-#   bash deploy/release.sh --import /tmp/ltzy.sql   # 从 pg_dump 恢复数据
+#   bash deploy/release.sh --import /tmp/dump.sql   # 从 pg_dump 恢复数据
 #
 # 前提：deploy/provision.sh 已经跑过，PHP + OpenSwoole + PostgreSQL 就绪。
 
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/opt/ltzy}"
-DB_NAME="${DB_NAME:-ltzy}"
-DB_USER="${DB_USER:-ltzy}"
-APP_USER="${APP_USER:-ltzy}"
+APP_DIR="${APP_DIR:-/opt/llm-gateway}"
+DB_NAME="${DB_NAME:-llm_gateway}"
+DB_USER="${DB_USER:-llm_gateway}"
+APP_USER="${APP_USER:-llm-gateway}"
 DO_MIGRATE=1
 IMPORT_FILE=""
 
@@ -101,9 +101,9 @@ fi
 
 # ── 5. systemd ────────────────────────────────────────────
 log "5/7 systemd 服务"
-cat > /etc/systemd/system/ltzy-api.service <<UNIT
+cat > /etc/systemd/system/llm-gateway.service <<UNIT
 [Unit]
-Description=LTZY API v2 (PHP + OpenSwoole)
+Description=LLM Gateway (PHP + Swoole)
 After=network.target postgresql.service
 Wants=postgresql.service
 
@@ -129,8 +129,8 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable ltzy-api >/dev/null
-systemctl restart ltzy-api
+systemctl enable llm-gateway >/dev/null
+systemctl restart llm-gateway
 ok "服务已启动"
 
 # ── 6. 等就绪 ─────────────────────────────────────────────
@@ -162,7 +162,7 @@ SERVER_HDR=$(curl -sI http://127.0.0.1:3000/ | tr -d '\r' | awk -F': ' 'tolower(
 [[ "${SERVER_HDR}" == "nginx" ]] && ok "Server: nginx" || { warn "Server 头为 '${SERVER_HDR}'"; FAILED=1; }
 
 echo "  · 隐藏路径"
-for p in /admin /dealer /manage /panel /backend; do
+for p in /admin /panel /manage /backend /dashboard; do
     code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000${p}")
     [[ "${code}" == "404" ]] || { warn "${p} 返回 ${code}（应为 404）"; FAILED=1; }
 done
@@ -199,7 +199,7 @@ echo
 if [[ ${FAILED} -eq 0 ]]; then
     printf '\033[1;32m═══ 部署完成，全部自检通过 ═══\033[0m\n'
     echo
-    echo "  服务：systemctl status ltzy-api"
+    echo "  服务：systemctl status llm-gateway"
     echo "  日志：tail -f ${APP_DIR}/var/server.out.log"
     echo "  访问：http://127.0.0.1:3000（外部经 nginx）"
 else

@@ -36,7 +36,8 @@ function post(string $url, array $body): array
 // ── 造测试账号 ──
 $username = 'emailtest_user';
 $email = 'emailtest@qq.com';
-$password = 'TestMail12345';
+// 测试账号密码随机生成，跑完即删 —— 脚本里不留任何固定密码
+$password = 'Tm' . bin2hex(random_bytes(8)) . '!9';
 $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
 
 $pdo->prepare("DELETE FROM users WHERE username = ? OR email = ?")->execute([$username, $email]);
