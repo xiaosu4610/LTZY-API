@@ -41,6 +41,6 @@ $stmt = $pdo->prepare('
     INSERT INTO users (username, password_hash, display_name, role, grp, quota)
     VALUES (?, ?, ?, 100, ?, 999999999)
 ');
-$stmt->execute([$username, $hash, '管理员', 'ltzy']);
+$stmt->execute([$username, $hash, '管理员', 'default']);
 
-printf("已创建管理员：%s / %s (role=100, group=ltzy)\n", $username, $password);
+printf("已创建管理员：%s / %s (role=100, group=default)\n", $username, $password);

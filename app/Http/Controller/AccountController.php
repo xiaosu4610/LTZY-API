@@ -240,7 +240,7 @@ final class AccountController
      *      对方就知道存在分层角色体系、也知道该往哪个数字试。
      *      自己是不是管理员，用 /api/me 顶层的 is_manager 布尔值表达。
      *   不含 status                     —— 能登录进来就说明状态正常。
-     *   不含 group                      —— 内部分组（default / ltzy 之类）是我们
+     *   不含 group                      —— 内部分组是部署方
      *      自己的编排概念，对经销商没有任何意义，只能说漏嘴。
      */
     private function publicUser(User $u): array

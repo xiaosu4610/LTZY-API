@@ -361,7 +361,7 @@ git push origin main develop --tags
 
 | # | 规则 | 违反后果 |
 | --- | --- | --- |
-| 1 | **改完 PHP 必须 `systemctl restart ltzy-api`** | `opcache.validate_timestamps=0`，不重启等于没改 |
+| 1 | **改完 PHP 必须 `systemctl restart llm-gateway`** | `opcache.validate_timestamps=0`，不重启等于没改 |
 | 2 | **不要在 Swoole 里用静态属性存请求状态** | 常驻进程会串号，A 用户看到 B 用户的余额 |
 | 3 | **Swoole 的 curl 不支持 `CURLOPT_LOW_SPEED_LIMIT/TIME`** | 抛 `option[19] is not supported`，全部转发 500 |
 | 4 | **常驻进程里的 `is_file()` 要配 `clearstatcache()`** | 删了文件仍返回 true，安装状态判断失效 |

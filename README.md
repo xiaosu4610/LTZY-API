@@ -86,23 +86,23 @@ php bin/server.php
 重启服务让配置生效：
 
 ```bash
-systemctl restart ltzy-api      # 或你用的进程管理器
+systemctl restart llm-gateway      # 或你用的进程管理器
 ```
 
 ### 生产部署（推荐 systemd + nginx）
 
 ```ini
-# /etc/systemd/system/ltzy-api.service
+# /etc/systemd/system/llm-gateway.service
 [Unit]
-Description=LTZY-API
+Description=LLM Gateway
 After=network.target postgresql.service
 
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/opt/ltzy
-EnvironmentFile=/opt/ltzy/.env
-ExecStart=/usr/bin/php /opt/ltzy/bin/server.php
+WorkingDirectory=/opt/llm-gateway
+EnvironmentFile=/opt/llm-gateway/.env
+ExecStart=/usr/bin/php /opt/llm-gateway/bin/server.php
 Restart=always
 
 [Install]

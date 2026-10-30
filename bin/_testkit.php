@@ -77,7 +77,7 @@ function probeCreate(string $prefix = 'probe', int $quotaYuan = 10, int $role = 
         '临时测试账号',
         $username . '@probe.local',
         $role,
-        $role >= 10 ? 'ltzy' : 'default',
+        'default',
         $quotaYuan * 1_000_000,
         'special',   // 普通用户都归 special，经销商靠 account_models 区分
     ]);

@@ -458,7 +458,7 @@ final class AuthController
      *                  对方就知道存在分层角色体系、也知道该往哪个数字试。
      *   已删除 status  能登录成功就意味着状态正常，不需要再告诉前端。
      *   已删除 password_hash / access_token —— 凭证，绝不出现在响应里。
-     *   已删除 group   内部分组（default / ltzy 之类）是我们自己的编排概念，
+     *   已删除 group   内部分组是部署方自己的编排概念，
      *                  对用户没有任何意义，只会让人反推出这套系统的层次结构。
      */
     private function publicUser(User $u): array

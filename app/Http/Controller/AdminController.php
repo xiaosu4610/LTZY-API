@@ -522,7 +522,7 @@ final class AdminController
     /**
      * POST /api/manage/users/{id}
      *
-     * body: {"status": 1|2, "quota": 1000000, "group": "ltzy", "role": 10}
+     * body: {"status": 1|2, "quota": 1000000, "group": "default", "role": 10}
      * 只更新传了的字段。
      */
     private function updateUser(Request $req, Response $resp, int $id): void

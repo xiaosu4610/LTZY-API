@@ -25,7 +25,7 @@ declare(strict_types=1);
  * ── 数据来源 ──
  *
  * .secrets/legacy/users.csv
- *   由 plink 从 /var/lib/ltzy-api/ltzy-api.db 导出（只读）。
+ *   从旧版系统只读导出的用户数据。
  *   列：id, username, display_name, password(bcrypt), email, quota, used_quota, request_count
  *
  * ── 登录方式 ──

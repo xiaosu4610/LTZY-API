@@ -118,13 +118,19 @@ $snaps = [];
 try {
     echo "═══ A. 真实账号登录 ═══\n";
 
-    // ── A1. 管理员（已知密码，直接用真密码）──
+    // ── A1. 管理员（密码从环境变量读，脚本里不存明文）──
     $admin = $pdo->query("SELECT id, username FROM users WHERE role >= 10 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     if ($admin === false) {
         check('存在管理员账号', false, 'users 表里没有 role>=10 的行');
     } else {
         $adminId = (int) $admin['id'];
-        $r = login((string) $admin['username'], '471142Qw..');
+        $adminPwd = getenv('E2E_ADMIN_PASS') ?: '';
+        if ($adminPwd === '') {
+            echo "  ⚠ 未设置 E2E_ADMIN_PASS，跳过管理员登录用例\n";
+            $r = ['code' => 0, 'ms' => 0, 'json' => []];
+        } else {
+            $r = login((string) $admin['username'], $adminPwd);
+        }
         check('管理员登录', $r['code'] === 200 && ($r['json']['success'] ?? false),
             "HTTP {$r['code']} {$r['ms']}ms");
 

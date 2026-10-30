@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * 数据库配置。
  *
- * v2 使用独立的 ltzy 库，与现网 Go 版的库完全隔离 ——
+ * 数据库连接全部从环境变量读，不写死任何主机名与凭据。
  * 切换前两边各自记账，互不影响。
  */
 
@@ -13,7 +13,7 @@ return [
     'port'     => (int) (getenv('DB_PORT') ?: 5433),
     'database' => getenv('DB_DATABASE') ?: 'ltzy',
     'username' => getenv('DB_USERNAME') ?: 'ltzy',
-    'password' => getenv('DB_PASSWORD') ?: 'ltzy_dev_2026',
+    'password' => (string) (getenv('DB_PASSWORD') ?: ''),
 
     // 连接池。每个池实例最多持有这么多连接。
     // 注意 PG 默认 max_connections = 100，多实例部署时总和不能超过它。

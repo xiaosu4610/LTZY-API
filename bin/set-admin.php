@@ -22,8 +22,13 @@ $pdo = new PDO($dsn, $dbCfg['username'], $dbCfg['password'], [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 ]);
 
-$username = $argv[1] ?? '17764753865';
-$password = $argv[2] ?? '471142Qw..';
+$username = $argv[1] ?? 'admin';
+$password = $argv[2] ?? '';
+if ($password === '') {
+    fwrite(STDERR, "用法: php bin/set-admin.php <用户名> <密码>\n");
+    fwrite(STDERR, "出于安全考虑，脚本不提供默认密码。\n");
+    exit(1);
+}
 
 if (strlen($password) < 8) {
     fwrite(STDERR, "密码至少 8 位\n");

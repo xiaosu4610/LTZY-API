@@ -37,7 +37,9 @@ function login(string $u, string $p): string
     return $j['data']['access_token'] ?? '';
 }
 
-$adminTok = login('17764753865', '471142Qw..');
+$benchAdmin = getenv('E2E_ADMIN_USER') ?: '';
+$benchPass  = getenv('E2E_ADMIN_PASS') ?: '';
+$adminTok = $benchAdmin !== '' ? login($benchAdmin, $benchPass) : '';
 // 普通用户：临时账号，跑完即删（库里不再保留示例数据）
 $probe = probeCreate('probe', 10);
 $acctTok = login($probe['username'], $probe['password']);
