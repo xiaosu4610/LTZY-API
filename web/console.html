@@ -901,7 +901,14 @@ async function userLogs(pane) {
           <td style="white-space:nowrap">${l.quota === 0 ? '—' : '¥' + Number(l.quota_yuan).toFixed(6)}</td>
           <td style="white-space:nowrap">${sec(l.elapsed_ms)}</td>
           <td style="white-space:nowrap">${sec(l.first_byte_ms)}</td>
-          <td class="mono" style="font-size:11.5px;white-space:nowrap">${l.prompt_tokens} + ${l.completion_tokens} = ${l.total_tokens}</td>
+          <td class="mono" style="font-size:11.5px;white-space:nowrap">${
+            (l.total_tokens === 0)
+              // 上游没返回 usage 时显示「—」而不是「0 + 0 = 0」。
+              // 显示 0 会让人误以为「空响应也扣费」，其实本系统按次计费，
+              // 扣费与 token 无关，0 只代表上游没报用量。
+              ? '<span style="color:var(--dim)" title="上游未返回 token 用量；按次计费，不影响扣费金额">—</span>'
+              : `${l.prompt_tokens} + ${l.completion_tokens} = ${l.total_tokens}`
+          }</td>
           <td style="white-space:nowrap">${l.tokens_per_sec > 0 ? l.tokens_per_sec + ' tok/s' : '—'}</td>
           <td>${l.status_code === 200
               ? '<span class="tag ok">200</span>'
