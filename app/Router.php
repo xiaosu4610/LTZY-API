@@ -146,6 +146,21 @@ final class Router
         $path = $req->path();
         $method = $req->method();
 
+        // ── 路径规范化（兼容各种客户端的 base_url 配法）──
+        //
+        // Issue #3：「使用 agent 会失效」，报 404 Invalid URL。
+        // 根因是各家客户端对 base_url 的拼法不统一，常见变体有：
+        //   · base 写成 https://host/v1，客户端再拼 /v1/chat/completions
+        //       → /v1/v1/chat/completions
+        //   · base 写成 https://host，客户端拼 /chat/completions
+        //       → /chat/completions（已单独容错）
+        //   · 有些 SDK 会加 /openai 前缀 → /openai/v1/chat/completions
+        //   · 老 SDK 走 /completions（legacy text completion）
+        //
+        // 这里统一收敛成规范路径再走路由表，避免用户因为配错一个斜杠就
+        // 拿到「Invalid URL」这种完全无法自查的错误。
+        $path = $this->normalizePath($path);
+
         // 安全评估 L-2：HEAD 在语义上等价 GET（只是不返回 body）。
         // 原来只匹配 GET，导致 HEAD / 返回 404 —— UptimeRobot、nginx
         // 健康检查等大量监控工具默认用 HEAD 探活，会把站点误判为宕机。
@@ -538,15 +553,101 @@ final class Router
                 // 但配合「缺 X-Content-Type-Options: nosniff」，
                 // 老浏览器或某些代理会做 MIME 嗅探并当 HTML 渲染 → XSS。
                 // 双保险：① 不回显路径原文 ② 响应头补 nosniff（见 Response）
+                //
+                // Issue #3：光回 "Invalid URL" 用户完全无法自查是路径写错还是
+                // base_url 配错。这里补上端点清单 —— 不暴露任何内部信息，
+                // 只是把「本服务支持什么」说清楚，这本就是公开文档的内容。
                 $resp->json([
                     'error' => [
-                        'message' => 'Invalid URL',
-                        'type'    => 'invalid_request_error',
-                        'param'   => '',
-                        'code'    => 'not_found',
+                        'message'  => 'Invalid URL',
+                        'type'     => 'invalid_request_error',
+                        'param'    => '',
+                        'code'     => 'not_found',
+                        'hint'     => '请检查 base_url 是否已包含 /v1。'
+                            . '例如 base_url 填 https://<域名>/v1，客户端请求 '
+                            . 'POST /v1/chat/completions 即可。',
+                        'endpoints' => [
+                            'POST /v1/chat/completions',
+                            'POST /v1/responses',
+                            'POST /v1/messages',
+                            'POST /v1/embeddings',
+                            'POST /v1/rerank',
+                            'POST /v1/images/generations',
+                            'POST /v1/audio/speech',
+                            'POST /v1/audio/transcriptions',
+                            'GET  /v1/models',
+                        ],
                     ],
                 ], 404);
         }
+    }
+
+    /**
+     * 把客户端五花八门的路径收敛成规范形式。
+     *
+     * 目标不是「什么都能过」，而是把**明确的配置失误**自动纠正，
+     * 让用户不必读源码就知道 base_url 该怎么填（Issue #3）。
+     *
+     * 处理的变体：
+     *   /v1/v1/xxx            → /v1/xxx        （base 已含 /v1，客户端又拼一次）
+     *   /openai/v1/xxx        → /v1/xxx        （部分 SDK 加前缀）
+     *   /api/v1/xxx           → /v1/xxx        （反代常见前缀）
+     *   /v1/completions       → /v1/chat/completions（legacy 端点，语义兼容）
+     *   /completions          → /v1/chat/completions
+     *
+     * 不处理任意路径重写 —— 只针对已知的 base_url 配置差异。
+     */
+    private function normalizePath(string $path): string
+    {
+        // 1. 反复剥离重复/多余的前缀（最多几轮，防御性写法）
+        for ($i = 0; $i < 3; $i++) {
+            $before = $path;
+
+            // base_url 已含 /v1，客户端又拼了 /v1
+            if (str_starts_with($path, '/v1/v1/')) {
+                $path = substr($path, 3);
+            }
+            // 常见反代前缀
+            if (str_starts_with($path, '/openai/v1/')) {
+                $path = substr($path, strlen('/openai'));
+            } elseif (str_starts_with($path, '/api/v1/')) {
+                $path = substr($path, strlen('/api'));
+            }
+
+            if ($path === $before) {
+                break;
+            }
+        }
+
+        // 2. legacy completions → chat/completions
+        //
+        // 老的 text completion 端点：{"prompt": "...", "max_tokens": 10}
+        // 与 chat 的差异只在请求体形状，由 RelayService 侧兼容处理，
+        // 这里只把路径接上 —— 否则老 SDK / 部分 agent 一上来就 404。
+        if ($path === '/v1/completions') {
+            return '/v1/chat/completions';
+        }
+        if ($path === '/completions') {
+            return '/v1/chat/completions';
+        }
+
+        // 3. 漏写 /v1 的常见端点，补齐后交给路由表
+        $noV1 = [
+            '/responses'          => '/v1/responses',
+            '/messages'           => '/v1/messages',
+            '/messages/count_tokens' => '/v1/messages/count_tokens',
+            '/models'             => '/v1/models',
+            '/embeddings'         => '/v1/embeddings',
+            '/rerank'             => '/v1/rerank',
+            '/images/generations' => '/v1/images/generations',
+            '/audio/speech'       => '/v1/audio/speech',
+            '/audio/transcriptions' => '/v1/audio/transcriptions',
+        ];
+        if (isset($noV1[$path])) {
+            return $noV1[$path];
+        }
+
+        return $path;
     }
 
     /**

@@ -37,6 +37,23 @@ final class RelayController
             return;
         }
 
+        // ── 兼容 legacy /v1/completions 的请求体 ──
+        //
+        // 老 SDK 和部分 agent 走 text completion 端点，body 是
+        //   {"prompt": "你好", "max_tokens": 10}
+        // 而 chat 要的是 messages 数组。Router 已把 /v1/completions
+        // 映射到本方法，这里负责把 body 补成 chat 形状。
+        // 不补的话用户会拿到「缺少 messages」这种跟他自己代码对不上的报错。
+        if (!isset($body['messages']) && isset($body['prompt'])) {
+            $prompt = $body['prompt'];
+            // prompt 也可能是字符串数组（批量补全），取第一个按单条处理
+            if (is_array($prompt)) {
+                $prompt = is_string($prompt[0] ?? null) ? $prompt[0] : '';
+            }
+            $body['messages'] = [['role' => 'user', 'content' => (string) $prompt]];
+            unset($body['prompt']);
+        }
+
         // ── 破甲包装：红队测试用，白名单外零开销 ──
         if ($this->packer !== null) {
             $body = $this->packer->pack($body);
