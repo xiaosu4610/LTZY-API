@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>模型广场 · LTZY API</title>
+<title>模型广场 · LLM Gateway</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -159,7 +159,7 @@ main{flex:1;overflow-y:auto}
 <header>
   <div class="wrap nav">
     <a href="/" class="logo" style="color:var(--text);text-decoration:none">
-      <span class="dot"></span> LTZY API
+      <span class="dot"></span> LLM Gateway
     </a>
     <div class="nav-links">
       <a href="/">首页</a>
@@ -384,6 +384,20 @@ async function load() {
       ? site.data.base_url
       : location.origin + '/v1';
 
+    // 品牌名按后台配置渲染
+    const bn = (site && site.data && site.data.brand && site.data.brand.name) || 'LLM Gateway';
+    document.querySelectorAll('.brand').forEach(el => {
+      if (!el.querySelector('.logo')) {
+        el.innerHTML = '<span class="dot"></span> ' + esc(bn);
+      }
+    });
+    if (site && site.data && site.data.has_logo) {
+      let link = document.querySelector('link[rel="icon"]');
+      if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+      link.href = site.data.logo_url;
+    }
+    window.__brandName = bn;
+
     // 厂商筛选按钮
     const vf = $('#vendorFilter');
     (r.data.vendors || []).forEach(v => {
@@ -405,7 +419,7 @@ async function load() {
       paint();
     };
 
-    document.title = `模型广场 · ${all.length} 个免费模型 · LTZY API`;
+    document.title = `模型广场 · ${all.length} 个免费模型 · ${window.__brandName || 'LLM Gateway'}`;
     paint();
   } catch (e) {
     $('#list').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';

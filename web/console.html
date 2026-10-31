@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>控制台 · LTZY API</title>
+<title>控制台 · LLM Gateway</title>
 <style>
 /* ══════════════════════════════════════════════════════
    扁平化设计
@@ -13,10 +13,15 @@
    ══════════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f7f8fa; --panel:#ffffff; --panel2:#f1f3f5;
-  --line:#e5e7eb; --line2:#d1d5db;
-  --text:#1f2328; --muted:#6b7280; --dim:#9ca3af;
-  --accent:#2563eb; --ok:#16a34a; --warn:#ca8a04; --err:#dc2626;
+  /* New API 风格色板：柔和灰底、白面板、亮蓝强调 */
+  --bg:#f0f2f5; --panel:#ffffff; --panel2:#f5f7fa;
+  --line:#e8ecf1; --line2:#d9dee5;
+  --text:#1a1f2e; --muted:#5f6b7a; --dim:#9aa5b1;
+  --accent:#3b82f6; --accent-deep:#2563eb; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
+  --violet:#8b5cf6; --cyan:#06b6d4; --rose:#f43f5e; --amber:#f59e0b;
+  --radius:10px; --radius-sm:6px;
+  --shadow:0 1px 3px rgba(16,24,40,.07),0 1px 2px rgba(16,24,40,.04);
+  --shadow-lg:0 12px 32px -8px rgba(16,24,40,.16),0 4px 12px rgba(16,24,40,.05);
 }
 body{font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
   background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
@@ -24,18 +29,20 @@ a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 .hide{display:none!important}
 
-.btn{padding:6px 12px;border-radius:3px;font-size:13px;font-weight:500;
-  border:1px solid var(--line2);background:var(--panel2);color:var(--text);
-  cursor:pointer;transition:background .1s;white-space:nowrap;font-family:inherit}
-.btn:hover{background:#e5e7eb}
+.btn{padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;
+  border:1px solid var(--line2);background:var(--panel);color:var(--text);
+  cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;
+  box-shadow:var(--shadow)}
+.btn:hover{background:var(--panel2);border-color:#c4ccd6}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn-primary:hover{background:#1d4ed8}
-.btn-sm{padding:4px 9px;font-size:12px}
-.btn-ok{border-color:var(--ok);color:var(--ok)}
-.btn-ok:hover{background:rgba(22,163,74,.1)}
-.btn-danger{border-color:var(--err);color:var(--err)}
-.btn-danger:hover{background:rgba(220,38,38,.1)}
-.btn-ghost{background:transparent}
+.btn-primary:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-ok{border-color:rgba(16,185,129,.4);color:var(--ok);background:rgba(16,185,129,.06)}
+.btn-ok:hover{background:rgba(16,185,129,.14)}
+.btn-danger{border-color:rgba(239,68,68,.4);color:var(--err);background:rgba(239,68,68,.06)}
+.btn-danger:hover{background:rgba(239,68,68,.14)}
+.btn-ghost{background:transparent;box-shadow:none;border-color:transparent;color:var(--muted)}
+.btn-ghost:hover{background:var(--panel2);border-color:var(--line2);color:var(--text)}
 
 input{width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--line2);
   border-radius:3px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
@@ -67,7 +74,10 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-wei
 .topbar{height:52px;border-bottom:1px solid var(--line);background:var(--panel);
   display:flex;align-items:center;padding:0 24px;gap:24px;flex:0 0 auto}
 .brand{font-size:14px;font-weight:650;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
-.brand::before{content:'';width:7px;height:7px;background:var(--accent);border-radius:1px}
+.brand .logo{width:22px;height:22px;border-radius:6px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--violet) 100%);
+  display:inline-flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11px;font-weight:800}
 .topnav{display:flex;gap:2px;flex:1}
 .topnav a{padding:6px 14px;border-radius:3px;font-size:13px;color:var(--muted);
   cursor:pointer;font-weight:500}
@@ -77,85 +87,128 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-wei
 .userMain{flex:1;overflow-y:auto;padding:28px 24px}
 .userMain .inner{max-width:1120px;margin:0 auto}
 
-/* 管理员壳：侧边栏 + 分组 */
+/* 管理员壳：图标侧边栏（New API 风格） */
 #adminShell{display:none;min-height:100vh}
 #adminShell.show{display:flex}
-.sidebar{width:196px;flex:0 0 196px;background:var(--panel);
-  border-right:1px solid var(--line);display:flex;flex-direction:column}
-.sidebrand{height:52px;display:flex;align-items:center;padding:0 18px;
-  border-bottom:1px solid var(--line);font-size:14px;font-weight:650;letter-spacing:.4px}
-.sidebrand::before{content:'';width:7px;height:7px;background:var(--accent);
-  border-radius:1px;margin-right:8px}
-.sidenav{flex:1;overflow-y:auto;padding:14px 10px}
-.navgroup{margin-bottom:18px}
+.sidebar{width:224px;flex:0 0 224px;background:var(--panel);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh}
+.sidebrand{height:60px;display:flex;align-items:center;padding:0 20px;
+  border-bottom:1px solid var(--line);font-size:15px;font-weight:700;letter-spacing:.3px;
+  gap:10px}
+.sidebrand .logo{width:28px;height:28px;border-radius:8px;flex:0 0 28px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--violet) 100%);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800}
+.sidenav{flex:1;overflow-y:auto;padding:16px 12px}
+.navgroup{margin-bottom:20px}
 .navgroup .gtitle{font-size:10.5px;color:var(--dim);text-transform:uppercase;
-  letter-spacing:.8px;padding:0 8px 7px;font-weight:600}
-.navgroup a{display:block;padding:7px 10px;border-radius:3px;font-size:13px;
-  color:var(--muted);cursor:pointer;font-weight:500;margin-bottom:1px}
+  letter-spacing:1px;padding:0 10px 8px;font-weight:700}
+.navgroup a{display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:var(--radius-sm);font-size:13.5px;
+  color:var(--muted);cursor:pointer;font-weight:500;margin-bottom:2px;
+  transition:all .15s}
+.navgroup a svg{width:17px;height:17px;flex:0 0 17px;opacity:.75;transition:opacity .15s}
 .navgroup a:hover{background:var(--panel2);color:var(--text);text-decoration:none}
-.navgroup a.on{background:var(--panel2);color:var(--text);
-  border-left:2px solid var(--accent);padding-left:8px}
-.sidefoot{padding:12px;border-top:1px solid var(--line);font-size:12px;color:var(--dim)}
-.adminMain{flex:1;overflow-y:auto;padding:26px 30px}
-.adminMain .inner{max-width:1180px}
+.navgroup a:hover svg{opacity:1}
+.navgroup a.on{background:var(--accent);color:#fff;
+  box-shadow:0 4px 12px -2px rgba(59,130,246,.4)}
+.navgroup a.on svg{opacity:1}
+.navgroup a .nvi{display:flex;align-items:center;gap:10px;flex:1}
+.sidefoot{padding:14px 16px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:10px}
+.sidefoot .avatar{width:32px;height:32px;border-radius:50%;flex:0 0 32px;
+  background:linear-gradient(135deg,var(--cyan),var(--accent));
+  color:#fff;font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.sidefoot .who{font-size:12.5px;color:var(--text);font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidefoot .who small{display:block;color:var(--dim);font-weight:400;font-size:10.5px}
+.adminMain{flex:1;overflow-y:auto;padding:28px 32px;background:var(--bg)}
+.adminMain .inner{max-width:1180px;margin:0 auto}
 
 /* 通用 */
 .pagehead{display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:22px;gap:16px;flex-wrap:wrap}
-.pagehead h2{font-size:17px;font-weight:600;letter-spacing:.2px}
-.pagehead .desc{font-size:12.5px;color:var(--dim);margin-top:3px}
+  margin-bottom:24px;gap:16px;flex-wrap:wrap}
+.pagehead h2{font-size:20px;font-weight:700;letter-spacing:-.2px}
+.pagehead .desc{font-size:13px;color:var(--muted);margin-top:4px}
 
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;
-  background:var(--line);border:1px solid var(--line);border-radius:3px;
-  overflow:hidden;margin-bottom:22px}
-.card{background:var(--panel);padding:16px 18px}
-.card .k{font-size:11.5px;color:var(--muted);margin-bottom:6px}
-.card .v{font-size:22px;font-weight:650;letter-spacing:-.3px;line-height:1.2}
-.card .v small{font-size:11.5px;color:var(--muted);font-weight:400;margin-left:2px}
+/* New API 风格统计卡：彩色圆底图标 + 大数字 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;
+  margin-bottom:24px}
+.card{background:var(--panel);padding:18px 20px;border-radius:var(--radius);
+  border:1px solid var(--line);box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:14px;transition:all .2s}
+.card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);
+  border-color:#cdd6e2}
+.card .ic{width:42px;height:42px;border-radius:10px;flex:0 0 42px;
+  display:flex;align-items:center;justify-content:center}
+.card .ic svg{width:20px;height:20px}
+.card .ic.blue{background:rgba(59,130,246,.12);color:var(--accent)}
+.card .ic.violet{background:rgba(139,92,246,.12);color:var(--violet)}
+.card .ic.cyan{background:rgba(6,182,212,.12);color:var(--cyan)}
+.card .ic.green{background:rgba(16,185,129,.12);color:var(--ok)}
+.card .ic.amber{background:rgba(245,158,11,.14);color:var(--warn)}
+.card .ic.rose{background:rgba(244,63,94,.12);color:var(--rose)}
+.card .bd{flex:1;min-width:0}
+.card .k{font-size:12px;color:var(--muted);margin-bottom:3px;font-weight:500}
+.card .v{font-size:23px;font-weight:700;letter-spacing:-.4px;line-height:1.15}
+.card .v small{font-size:12px;color:var(--muted);font-weight:400;margin-left:2px}
 .card .v.accent{color:var(--accent)}
-.card .hint{font-size:11px;color:var(--dim);margin-top:4px}
+.card .hint{font-size:11px;color:var(--dim);margin-top:3px}
 
-table{width:100%;border-collapse:collapse;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;font-size:13px;overflow:hidden}
-th{background:var(--panel2);text-align:left;padding:9px 12px;color:var(--muted);
-  font-weight:500;font-size:11.5px;border-bottom:1px solid var(--line);
-  white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
-td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table{width:100%;border-collapse:separate;border-spacing:0;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);font-size:13px;
+  overflow:hidden;box-shadow:var(--shadow)}
+th{background:var(--panel2);text-align:left;padding:11px 14px;color:var(--muted);
+  font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);
+  white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
+td{padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
 tr:last-child td{border-bottom:0}
-tbody tr:hover td{background:var(--panel2)}
+tbody tr{transition:background .12s}
+tbody tr:hover td{background:rgba(59,130,246,.045)}
 .mono{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:12px}
 
-.tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10.5px;
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;
+  border-radius:999px;font-size:10.5px;
   font-weight:600;letter-spacing:.2px;border:1px solid transparent}
-.tag.ok{color:var(--ok);border-color:rgba(22,163,74,.28);background:rgba(22,163,74,.08)}
-.tag.err{color:var(--err);border-color:rgba(220,38,38,.28);background:rgba(220,38,38,.08)}
-.tag.warn{color:var(--warn);border-color:rgba(234,179,8,.35);background:rgba(234,179,8,.08)}
+.tag::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.tag.ok{color:#0d9d6d;border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.08)}
+.tag.err{color:#e0364e;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08)}
+.tag.warn{color:#cf8a04;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.1)}
 .tag.neutral{color:var(--muted);border-color:var(--line2);background:var(--panel2)}
+.tag.blue{color:var(--accent-deep);border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.08)}
 
-.section{margin-top:26px}
+.section{margin-top:28px}
 .section:first-child{margin-top:0}
-.section h3{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px;
-  text-transform:uppercase;letter-spacing:.6px}
+.section h3{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;
+  letter-spacing:.2px;display:flex;align-items:center;gap:8px}
+.section h3::before{content:'';width:3px;height:14px;border-radius:2px;
+  background:var(--accent)}
 
-.bar{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;min-width:50px}
-.bar>i{display:block;height:100%;background:var(--accent)}
+.bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;min-width:50px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--violet));
+  border-radius:3px;transition:width .3s}
 
-.notice{border:1px solid var(--line2);border-left:2px solid var(--warn);
-  background:var(--panel);border-radius:2px;padding:10px 14px;
-  font-size:12.5px;color:var(--muted);margin-bottom:18px}
+.notice{border:1px solid var(--line);border-left:3px solid var(--warn);
+  background:var(--panel);border-radius:var(--radius-sm);padding:12px 16px;
+  font-size:13px;color:var(--muted);margin-bottom:20px;box-shadow:var(--shadow)}
 .notice b{color:var(--text);font-weight:600}
 .notice.info{border-left-color:var(--accent)}
 
-.empty{padding:44px;text-align:center;color:var(--dim);background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;font-size:13px}
-.loading{padding:44px;text-align:center;color:var(--dim);font-size:13px}
+.empty{padding:48px;text-align:center;color:var(--dim);background:var(--panel);
+  border:1px dashed var(--line2);border-radius:var(--radius);font-size:13px}
+.loading{padding:48px;text-align:center;color:var(--dim);font-size:13px}
 .toolbar{display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:12px;gap:12px;flex-wrap:wrap}
-.toolbar input{max-width:220px}
+  margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.toolbar input{max-width:220px;border-radius:var(--radius-sm)}
 
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
-  padding:9px 18px;background:var(--panel2);border:1px solid var(--line2);
-  border-radius:3px;font-size:13px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  padding:10px 22px;background:#1a1f2e;border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;font-size:13px;color:#fff;z-index:999;
+  box-shadow:0 8px 28px rgba(16,24,40,.3)}
+
+/* SVG 图标基线 */
+svg.ic{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* ── 充值 ── */
 .amtgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px;margin-bottom:16px}
@@ -169,22 +222,27 @@ tbody tr:hover td{background:var(--panel2)}
 .payrow select{min-width:120px}
 
 @media(max-width:820px){
-  .sidebar{width:56px;flex:0 0 56px}
-  .sidebrand{justify-content:center;padding:0;font-size:0}
-  .sidebrand::before{margin:0}
+  .sidebar{width:60px;flex:0 0 60px}
+  .sidebrand{justify-content:center;padding:0}
+  .sidebrand span{display:none}
   .navgroup .gtitle{display:none}
-  .navgroup a{text-align:center;padding:8px 4px;font-size:11px;border-left:0!important}
+  .navgroup a{justify-content:center;padding:10px 4px}
+  .navgroup a .nvi span{display:none}
+  .navgroup a svg{width:19px;height:19px}
+  .sidefoot .who{display:none}
   .adminMain{padding:18px 14px}
   .userMain{padding:18px 14px}
   .topnav a{padding:6px 9px;font-size:12px}
   .cards{grid-template-columns:repeat(2,1fr)}
+  .card{padding:14px;gap:10px}
+  .card .ic{width:34px;height:34px;flex:0 0 34px;border-radius:8px}
 }
 </style>
 </head>
 <body>
 
 <div id="loginBox">
-  <h1 id="loginTitle">LTZY API</h1>
+  <h1 id="loginTitle">LLM Gateway</h1>
   <div id="loginSub" style="text-align:center;color:var(--muted);font-size:13px;margin:-18px 0 22px"></div>
   <div class="field"><label>用户名</label>
     <input id="u" autocomplete="username" maxlength="64" autofocus></div>
@@ -211,7 +269,7 @@ tbody tr:hover td{background:var(--panel2)}
 
 <div id="userShell">
   <div class="topbar">
-    <div class="brand">LTZY API</div>
+    <div class="brand"><span class="logo">L</span>LLM Gateway</div>
     <div class="topnav" id="userNav"></div>
     <div class="topright">
       <span id="userWho"></span>
@@ -223,9 +281,12 @@ tbody tr:hover td{background:var(--panel2)}
 
 <div id="adminShell">
   <div class="sidebar">
-    <div class="sidebrand">LTZY</div>
+    <div class="sidebrand"><div class="logo">L</div><span>LLM Gateway</span></div>
     <div class="sidenav" id="adminNav"></div>
-    <div class="sidefoot"><div id="sideMem"></div></div>
+    <div class="sidefoot">
+      <div class="avatar" id="sideAva">A</div>
+      <div class="who"><div id="sideMem"></div><small>管理员</small></div>
+    </div>
   </div>
   <div class="adminMain"><div class="inner" id="adminPane"><div class="loading">加载中…</div></div></div>
 </div>
@@ -234,8 +295,25 @@ tbody tr:hover td{background:var(--panel2)}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = n => Number(n || 0).toLocaleString('zh-CN');
-const yuan = n => Number(n || 0).toFixed(2);
+// 金额统一显示 8 位小数。
+//
+// ⚠️ 系统真实精度是 6 位：quota 为整数，1 元 = 1,000,000 quota，
+// 所以最小可表示 0.000001 元。这里显示 8 位是为了让"余额还剩
+// 0.001375 元"这种小额不会看起来像四舍五入成 0，末尾两位恒为 0。
+// 以后若把换算改成 1 元 = 1e8，这里不用改。
+const yuan = n => Number(n || 0).toFixed(8);
 const fmtTime = t => t ? String(t).replace('T',' ').replace('Z','').slice(0,19) : '—';
+
+// 耗时统一换算成秒，全站共用。
+//
+// 为什么不用毫秒：用户看到「5991ms」第一反应是"好慢"，看到「5.99 秒」
+// 感受完全不同；而且小数值时毫秒反而不直观（0.31s 写成 310ms 会让人
+// 以为慢了十倍）。小于 1 秒时保留两位，让 0.31 秒这种真实快照不被四舍五入。
+const sec = ms => {
+  const n = Number(ms) || 0;
+  if (n <= 0) return '—';
+  return (n / 1000).toFixed(2) + ' 秒';
+};
 
 let token = localStorage.getItem('ltzy_token') || '';
 let me = null;
@@ -291,7 +369,7 @@ async function loadCaptcha() {
 function setAuthMode(mode) {
   authMode = mode;
   const isReg = mode === 'register';
-  $('#loginTitle').textContent = isReg ? '注册账号' : 'LTZY API';
+  $('#loginTitle').textContent = isReg ? '注册账号' : 'LLM Gateway';
   $('#loginSub').textContent = isReg ? '输入用户名和密码，立即创建' : '';
   $('#loginBtn').textContent = isReg ? '注册并登录' : '登录';
   $('#switchHint').textContent = isReg ? '已有账号？' : '还没有账号？';
@@ -334,7 +412,18 @@ async function doLogin() {
     if (res.status === 429) {
       msg.textContent = j.message || '尝试次数过多'; msg.classList.add('warn'); return;
     }
-    msg.textContent = j.message || '登录失败'; msg.classList.add('err');
+    // 登录失败时把提示与请求 ID 一起显示：
+    // 用户报障时提供这个 ID，管理员在日志里能直接定位本次尝试
+    // （日志已记录 user_exists，一眼看出是查无此人还是密码错误）。
+    if (j.request_id) {
+      msg.innerHTML = `${esc(j.message || '登录失败')}
+        <div style="font-size:11.5px;color:var(--dim);margin-top:6px;line-height:1.6">
+          ${esc(j.hint || '')}<br>请求 ID：<span class="mono">${esc(j.request_id)}</span>
+        </div>`;
+    } else {
+      msg.textContent = j.message || '登录失败';
+    }
+    msg.classList.add('err');
     $('#p').value = '';
   } catch (e) {
     msg.textContent = '网络错误'; msg.classList.add('err');
@@ -379,6 +468,9 @@ async function doRegister() {
 }
 
 async function boot() {
+  // 品牌配置优先加载：即使未登录，登录页也要显示正确的站点名与 Logo
+  loadSiteBrand();
+
   if (!token) { $('#loginBox').classList.remove('hide'); return; }
   try {
     const r = await fetch('/api/me', {headers:{'Authorization':'Bearer '+token}});
@@ -399,8 +491,20 @@ function buildUser() {
   $('#userShell').classList.add('show');
   $('#userWho').textContent = me.user.display_name || me.user.username;
 
+  // 代理与普通用户界面不同：
+  //   代理拿货价由平台定，余额由平台划拨，**没有自助充值** ——
+  //   所以不渲染"充值"菜单，避免给他一个点了就报错的入口。
+  const isAgent = !!me.user.is_agent;
+
   const nav = $('#userNav');
-  nav.innerHTML = `
+  nav.innerHTML = isAgent
+    ? `
+    <a data-k="overview">概览</a>
+    <a data-k="playground">在线试玩</a>
+    <a data-k="models">我的模型</a>
+    <a data-k="tokens">API 密钥</a>
+    <a data-k="logs">调用日志</a>`
+    : `
     <a data-k="overview">概览</a>
     <a data-k="playground">在线试玩</a>
     <a data-k="models">我的模型</a>
@@ -411,7 +515,9 @@ function buildUser() {
   // 支持 ?tab=recharge 这类深链：支付完成后网关会把人送回
   // /console.html?tab=recharge，直接落在充值记录上，不用他自己找。
   const want = new URLSearchParams(location.search).get('tab');
-  const valid = ['overview', 'playground', 'models', 'tokens', 'recharge', 'logs'];
+  const valid = isAgent
+    ? ['overview', 'playground', 'models', 'tokens', 'logs']
+    : ['overview', 'playground', 'models', 'tokens', 'recharge', 'logs'];
   const initial = valid.includes(want) ? want : 'overview';
 
   nav.querySelectorAll('a').forEach(a => {
@@ -463,7 +569,7 @@ async function userPlayground(pane) {
   }
 
   const opt = m => `<option value="${esc(m.model)}">${esc(m.model)}` +
-    (m.tier === 'paid' ? `　¥${Number(m.price_yuan).toFixed(4)}/次` : '　免费') + '</option>';
+    (m.tier === 'paid' ? `　¥${Number(m.price_yuan).toFixed(6)}/次` : '　免费') + '</option>';
 
   pane.innerHTML = `
     <div class="pagehead">
@@ -519,14 +625,14 @@ async function userPlayground(pane) {
       if (!res.ok) {
         const msg = j?.error?.message || j?.message || ('HTTP ' + res.status);
         const code = j?.error?.code || j?.code || '';
-        out.innerHTML = `<div class="notice"><b>调用失败</b>（${esc(model)}，${ms} ms）<br>${esc(msg)}` +
+        out.innerHTML = `<div class="notice"><b>调用失败</b>（${esc(model)}，${sec(ms)}）<br>${esc(msg)}` +
           (code ? `　<span class="pg-meta">code=${esc(code)}</span>` : '') + '</div>';
       } else {
         const content = j?.choices?.[0]?.message?.content ?? '(空响应)';
         const usage = j?.usage || {};
         const tk = usage.total_tokens ? ` · ${usage.total_tokens} tokens` : '';
         out.innerHTML = `<div class="pg-reply">${esc(content)}</div>
-          <div class="pg-meta">${esc(model)} · ${ms} ms${tk}</div>`;
+          <div class="pg-meta">${esc(model)} · ${sec(ms)}${tk}</div>`;
       }
     } catch (e) {
       out.innerHTML = `<div class="notice"><b>请求失败</b><br>${esc(e.message)}</div>`;
@@ -557,8 +663,9 @@ async function userOverview(pane) {
     <div class="cards">
       <div class="card"><div class="k">可用余额</div>
         <div class="v accent">¥${yuan(u.quota_yuan)}</div>
-        <div class="hint"><a onclick="renderUser('recharge')"
-          style="cursor:pointer;color:var(--accent)">去充值 →</a></div></div>
+        <div class="hint">${u.is_agent
+          ? '<span style="color:var(--muted)">余额由平台方划拨</span>'
+          : '<a onclick="renderUser(\'recharge\')" style="cursor:pointer;color:var(--accent)">去充值 →</a>'}</div></div>
       <div class="card"><div class="k">累计消费</div>
         <div class="v">¥${yuan(u.used_yuan)}</div></div>
       <div class="card"><div class="k">总请求</div>
@@ -566,8 +673,8 @@ async function userOverview(pane) {
       <div class="card"><div class="k">可用模型</div>
         <div class="v">${self.data.model_count}</div></div>
       <div class="card"><div class="k">平均响应</div>
-        <div class="v">${s.avg_ms||0}<small>ms</small></div>
-        <div class="hint">首字节 ${s.avg_ttft||0} ms</div></div>
+        <div class="v">${sec(s.avg_ms)}</div>
+        <div class="hint">首字节 ${sec(s.avg_ttft)}</div></div>
     </div>
     <div class="section">
       <h3>近 ${usage.data.days} 天用量</h3>
@@ -599,25 +706,51 @@ async function userModels(pane) {
   const items = r.data.items || [];
   const paid = items.filter(m => m.tier === 'paid');
   const free = items.filter(m => m.tier === 'free');
+  const isAgent = !!r.data.is_agent;
 
-  const row = m => `
+  // 代理的表格多三列：零售价 / 每单省 / 折扣。
+  // 他真正关心的不是"拿货价多少"，而是"我一单能赚多少"，
+  // 所以必须把零售价并排摆出来，让他自己算利润空间。
+  const paidRow = m => isAgent ? `
     <tr><td class="mono">${esc(m.model)}</td><td>${esc(m.vendor)}</td>
-      <td>${m.tier === 'paid'
-          ? '<span class="tag warn">¥'+Number(m.price_yuan).toFixed(4)+' /次</span>'
-          : '<span class="tag ok">免费</span>'}</td>
+      <td><b style="color:var(--accent)">¥${Number(m.price_yuan).toFixed(6)}</b></td>
+      <td style="color:var(--muted)">¥${Number(m.retail_price_yuan || 0).toFixed(6)}</td>
+      <td><span class="tag ok">省 ¥${Number(m.saved_yuan || 0).toFixed(6)}</span></td>
+      <td><span class="tag neutral">${((m.discount || 1) * 10).toFixed(1)} 折</span></td>
+      <td><button class="btn btn-sm btn-ghost"
+          onclick="copyText('${esc(m.model).replace(/'/g,"\\'")}')">复制 ID</button></td></tr>` : `
+    <tr><td class="mono">${esc(m.model)}</td><td>${esc(m.vendor)}</td>
+      <td><span class="tag warn">¥${Number(m.price_yuan).toFixed(6)} /次</span></td>
       <td><button class="btn btn-sm btn-ghost"
           onclick="copyText('${esc(m.model).replace(/'/g,"\\'")}')">复制 ID</button></td></tr>`;
 
-  const table = rows => `
+  const freeRow = m => `
+    <tr><td class="mono">${esc(m.model)}</td><td>${esc(m.vendor)}</td>
+      <td><span class="tag ok">免费</span></td>
+      <td><button class="btn btn-sm btn-ghost"
+          onclick="copyText('${esc(m.model).replace(/'/g,"\\'")}')">复制 ID</button></td></tr>`;
+
+  const paidTable = rows => isAgent ? `
+    <table>
+      <thead><tr><th>模型 ID</th><th>厂商</th><th>拿货价</th><th>零售价</th><th>每单省</th><th>折扣</th><th>操作</th></tr></thead>
+      <tbody>${rows.map(paidRow).join('')}</tbody>
+    </table>` : `
     <table>
       <thead><tr><th>模型 ID</th><th>厂商</th><th>单价</th><th>操作</th></tr></thead>
-      <tbody>${rows.map(row).join('')}</tbody>
+      <tbody>${rows.map(paidRow).join('')}</tbody>
+    </table>`;
+
+  const freeTable = rows => `
+    <table>
+      <thead><tr><th>模型 ID</th><th>厂商</th><th>单价</th><th>操作</th></tr></thead>
+      <tbody>${rows.map(freeRow).join('')}</tbody>
     </table>`;
 
   pane.innerHTML = `
     <div class="pagehead">
-      <div><h2>我的模型</h2>
-        <div class="desc">共 ${items.length} 个可用 · 免费 ${free.length} · 收费 ${paid.length}</div></div>
+      <div><h2>我的模型${isAgent ? '（代理）' : ''}</h2>
+        <div class="desc">共 ${items.length} 个可用 · 免费 ${free.length} · 计费 ${paid.length}${
+          isAgent ? ` · 每单合计可省 ¥${Number(r.data.saved_total || 0).toFixed(6)}` : ''}</div></div>
       <button class="btn btn-sm" onclick="renderUser('models')">刷新</button>
     </div>
     <div class="notice info">
@@ -627,13 +760,15 @@ async function userModels(pane) {
     ${paid.length ? `
     <div class="section">
       <h3>计费模型 <span class="tag warn">${paid.length}</span></h3>
-      <div class="desc" style="margin:2px 0 8px">按次计费。余额不足时调用会直接报错，充值后即可使用。</div>
-      ${table(paid)}
+      <div class="desc" style="margin:2px 0 8px">${isAgent
+        ? '拿货价由平台统一制定。零售价是对外公开价格，两者差额即你的利润空间。'
+        : '按次计费。余额不足时调用会直接报错，充值后即可使用。'}</div>
+      ${paidTable(paid)}
     </div>` : ''}
     ${free.length ? `
     <div class="section">
       <h3>免费模型 <span class="tag ok">${free.length}</span></h3>
-      ${table(free)}
+      ${freeTable(free)}
     </div>` : ''}
     ${items.length === 0 ? '<div class="empty">暂无可用模型，请刷新页面</div>' : ''}`;
 }
@@ -744,27 +879,37 @@ async function userRecharge(pane) {
 async function userLogs(pane) {
   const r = await api('/api/account/logs?limit=100');
   const items = r.data.items || [];
+
   pane.innerHTML = `
     <div class="pagehead">
       <div><h2>调用日志</h2>
-        <div class="desc">最近 ${items.length} 条 · 保留 ${r.data.retention_days} 天</div></div>
+        <div class="desc">最近 ${items.length} 条 · 保留 ${r.data.retention_days} 天 · 耗时为秒</div></div>
       <button class="btn btn-sm" onclick="renderUser('logs')">刷新</button>
     </div>
     ${items.length === 0 ? '<div class="empty">暂无调用记录</div>' : `
     <table>
-      <thead><tr><th>时间</th><th>模型</th><th>类型</th><th>消费</th>
-        <th>耗时</th><th>首字节</th><th>Token</th><th>状态</th></tr></thead>
+      <thead><tr>
+        <th>时间</th><th>模型</th><th>类型</th><th>消费</th>
+        <th>耗时</th><th>首字节</th><th>Token（入+出）</th><th>速度</th><th>状态</th>
+      </tr></thead>
       <tbody>${items.map(l => `
-        <tr><td class="mono" style="font-size:11.5px">${fmtTime(l.time)}</td>
+        <tr title="请求 ID：${esc(l.request_id)}">
+          <td class="mono" style="font-size:11.5px;white-space:nowrap">${fmtTime(l.time)}</td>
           <td class="mono">${esc(l.model)}</td>
           <td>${l.is_stream ? '<span class="tag neutral">流式</span>'
-              : '<span class="tag neutral">普通</span>'}</td>
-          <td>${l.quota === 0 ? '—' : '¥'+Number(l.quota_yuan).toFixed(4)}</td>
-          <td>${l.elapsed_ms}ms</td>
-          <td>${l.first_byte_ms ? l.first_byte_ms+'ms' : '—'}</td>
-          <td class="mono" style="font-size:11.5px">${l.prompt_tokens}+${l.completion_tokens}</td>
-          <td>${l.status_code === 200 ? '<span class="tag ok">200</span>'
-              : '<span class="tag err">'+l.status_code+'</span>'}</td></tr>`).join('')}
+                          : '<span class="tag neutral">普通</span>'}</td>
+          <td style="white-space:nowrap">${l.quota === 0 ? '—' : '¥' + Number(l.quota_yuan).toFixed(6)}</td>
+          <td style="white-space:nowrap">${sec(l.elapsed_ms)}</td>
+          <td style="white-space:nowrap">${sec(l.first_byte_ms)}</td>
+          <td class="mono" style="font-size:11.5px;white-space:nowrap">${l.prompt_tokens} + ${l.completion_tokens} = ${l.total_tokens}</td>
+          <td style="white-space:nowrap">${l.tokens_per_sec > 0 ? l.tokens_per_sec + ' tok/s' : '—'}</td>
+          <td>${l.status_code === 200
+              ? '<span class="tag ok">200</span>'
+              : '<span class="tag err">' + l.status_code + '</span>'}</td>
+        </tr>
+        ${l.detail ? `<tr><td colspan="9" style="padding:0 8px 8px;border-top:none">
+            <div style="font-size:11.5px;color:var(--danger,#e5534b);word-break:break-all;line-height:1.5">↳ ${esc(l.detail)}</div>
+          </td></tr>` : ''}`).join('')}
       </tbody>
     </table>`}`;
 }
@@ -802,7 +947,7 @@ async function userTokens(pane) {
             <td>${Number(t.remain_quota) > 0
                   ? '¥' + yuan(Number(t.remain_quota) / 1e6)
                   : '<span class="tag neutral">不限</span>'}</td>
-            <td>¥${(Number(t.used_quota) / 1e6).toFixed(4)}</td>
+            <td>¥${(Number(t.used_quota) / 1e6).toFixed(6)}</td>
             <td class="mono" style="font-size:11.5px">${fmtTime(t.created_at)}</td>
             <td style="text-align:right"><button class="btn btn-sm" data-del="${t.id}">删除</button></td>
           </tr>`).join('')}</tbody>
@@ -843,21 +988,109 @@ async function createToken(name) {
 }
 
 /* ══════════ 管理员控制台 ══════════ */
+// 线性 SVG 图标（stroke 风格，currentColor 继承，无外部依赖）
+const I = {
+  dash:    '<svg class="ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg>',
+  users:   '<svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  logs:    '<svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>',
+  channel: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 2v6"/><path d="M12 16v6"/><rect x="8" y="8" width="8" height="8" rx="2"/><path d="M5 22a7 7 0 0 1 0-14"/><path d="M19 22a7 7 0 0 0 0-14"/></svg>',
+  price:   '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M15.5 9a3.5 3.5 0 0 0-3.5-1 3.5 3.5 0 0 0 0 7 3.5 3.5 0 0 0 3.5-1"/></svg>',
+  model:   '<svg class="ic" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>',
+  shield:  '<svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>',
+  bolt:    '<svg class="ic" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+  clock:   '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  key:     '<svg class="ic" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+  gear:    '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09A1.65 1.65 0 0 0 20.91 10H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+};
+
+/* ── 站点品牌：从后端取配置并应用到页面 ──
+ *
+ * 这套系统要分发给不同用户部署，品牌名/Logo 必须可改。
+ * 配置存 options 表，页面加载时拉一次，改完刷新即生效。
+ */
+let SITE = { name: 'LLM Gateway', desc: '', footer: '', has_logo: false, logo_url: '/favicon.ico' };
+
+async function loadSiteBrand() {
+  try {
+    const r = await fetch('/api/site', { cache: 'no-store' });
+    const j = await r.json();
+    if (j && j.data) {
+      SITE = Object.assign(SITE, j.data);
+      applySiteBrand();
+    }
+  } catch (e) {
+    // 拿不到就保持默认，绝不能因为读配置失败让页面白屏
+  }
+}
+
+function applySiteBrand() {
+  document.title = SITE.name + ' · 控制台';
+  document.querySelectorAll('.brand, .sidebrand').forEach(el => {
+    const span = el.querySelector('span');
+    if (span && !span.classList.contains('logo')) {
+      span.textContent = SITE.name;
+    }
+  });
+  // 没有自定义 Logo 时，字母方块取品牌名首字
+  const initial = (SITE.name || 'L').trim().charAt(0).toUpperCase();
+  document.querySelectorAll('.logo').forEach(el => {
+    if (el.dataset.img === '1') return;   // 已是图片，不动
+    el.textContent = initial;
+  });
+  // 登录页标题也一起换
+  const lt = document.querySelector('#loginTitle');
+  if (lt) lt.textContent = SITE.name;
+  const ld = document.querySelector('#loginSub');
+  if (ld && SITE.desc) ld.textContent = SITE.desc;
+
+  if (SITE.has_logo) {
+    document.querySelectorAll('.logo').forEach(el => {
+      if (el.dataset.img === '1') return;
+      const img = document.createElement('img');
+      img.src = SITE.logo_url;
+      img.alt = SITE.name;
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:inherit;display:block';
+      el.dataset.img = '1';
+      el.textContent = '';
+      el.style.background = 'transparent';
+      el.appendChild(img);
+    });
+    // 浏览器标签页图标也跟着换
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = SITE.logo_url;
+  }
+}
+
 const ADMIN_NAV = [
-  {group:'运营', items:[{k:'dash',n:'概览'},{k:'accounts',n:'账户'},{k:'alllogs',n:'调用日志'}]},
-  {group:'配置', items:[{k:'channels',n:'渠道'},{k:'prices',n:'定价'},{k:'models',n:'模型清单'}]},
-  {group:'系统', items:[{k:'security',n:'登录防护'}]},
+  {group:'运营', items:[
+    {k:'dash',n:'数据看板',i:I.dash},
+    {k:'accounts',n:'账户管理',i:I.users},
+    {k:'alllogs',n:'调用日志',i:I.logs}]},
+  {group:'配置', items:[
+    {k:'channels',n:'渠道管理',i:I.channel},
+    {k:'prices',n:'模型定价',i:I.price},
+    {k:'models',n:'模型清单',i:I.model},
+    {k:'brand',n:'站点设置',i:I.gear}]},
+  {group:'系统', items:[
+    {k:'security',n:'登录防护',i:I.shield}]},
 ];
 
 function buildAdmin() {
   $('#adminShell').classList.add('show');
-  $('#sideMem').textContent = me.user.display_name || me.user.username;
+  const who = me.user.display_name || me.user.username;
+  $('#sideMem').textContent = who;
+  $('#sideAva').textContent = (who[0] || 'A').toUpperCase();
 
   const nav = $('#adminNav');
   nav.innerHTML = ADMIN_NAV.map(g => `
     <div class="navgroup">
       <div class="gtitle">${g.group}</div>
-      ${g.items.map(it => `<a data-k="${it.k}">${it.n}</a>`).join('')}
+      ${g.items.map(it => `<a data-k="${it.k}"><span class="nvi">${it.i}<span>${it.n}</span></span></a>`).join('')}
     </div>`).join('');
 
   const first = ADMIN_NAV[0].items[0].k;
@@ -883,6 +1116,7 @@ async function renderAdmin(key) {
       case 'channels': await adminChannels(pane); break;
       case 'prices':   await adminPrices(pane); break;
       case 'models':   await adminModels(pane); break;
+      case 'brand':    await adminBrand(pane); break;
       case 'security': await adminSecurity(pane); break;
     }
   } catch (e) {
@@ -898,23 +1132,28 @@ async function adminDash(pane) {
 
   pane.innerHTML = `
     <div class="pagehead">
-      <div><h2>系统概览</h2>
+      <div><h2>数据看板</h2>
         <div class="desc">PHP ${esc(c.php_version||'?')} · Swoole ${esc(c.swoole_version||'?')}
           · 进程 ${c.memory_mb||0} MB</div></div>
       <button class="btn btn-sm" onclick="renderAdmin('dash')">刷新</button>
     </div>
     <div class="cards">
-      <div class="card"><div class="k">启用渠道</div>
-        <div class="v">${c.channels_enabled||0}<small>/ ${c.channels_total||0}</small></div></div>
-      <div class="card"><div class="k">账户总数</div>
-        <div class="v">${num(c.users_total)}</div></div>
-      <div class="card"><div class="k">令牌</div>
-        <div class="v">${num(c.tokens_total)}</div></div>
-      <div class="card"><div class="k">7 日请求</div>
-        <div class="v">${num(s.requests)}</div></div>
-      <div class="card"><div class="k">平均延迟</div>
-        <div class="v">${s.avg_ms||0}<small>ms</small></div>
-        <div class="hint">首字节 ${s.avg_ttft||0} ms</div></div>
+      <div class="card"><div class="ic blue">${I.channel}</div>
+        <div class="bd"><div class="k">启用渠道</div>
+        <div class="v">${c.channels_enabled||0}<small>/ ${c.channels_total||0}</small></div></div></div>
+      <div class="card"><div class="ic violet">${I.users}</div>
+        <div class="bd"><div class="k">账户总数</div>
+        <div class="v">${num(c.users_total)}</div></div></div>
+      <div class="card"><div class="ic cyan">${I.key}</div>
+        <div class="bd"><div class="k">令牌</div>
+        <div class="v">${num(c.tokens_total)}</div></div></div>
+      <div class="card"><div class="ic green">${I.bolt}</div>
+        <div class="bd"><div class="k">7 日请求</div>
+        <div class="v">${num(s.requests)}</div></div></div>
+      <div class="card"><div class="ic amber">${I.clock}</div>
+        <div class="bd"><div class="k">平均延迟</div>
+        <div class="v">${sec(s.avg_ms)}</div>
+        <div class="hint">首字节 ${sec(s.avg_ttft)}</div></div></div>
     </div>
     ${(c.loginguard && (c.loginguard.locked_accounts > 0 || c.loginguard.locked_ips > 0)) ? `
     <div class="notice">
@@ -1068,7 +1307,7 @@ async function showModelPicker(pane, userId, username) {
       || m.vendor.toLowerCase().includes(kw));
     lst.innerHTML = shown.map(m => {
       const on = assigned.has(m.model);
-      const price = on ? (assigned.get(m.model)/1000000).toFixed(4) : '0.0050';
+      const price = on ? (assigned.get(m.model)/1000000).toFixed(6) : '0.005000';
       return `
         <label style="display:flex;align-items:center;gap:10px;padding:7px 12px;
                border-bottom:1px solid var(--line);cursor:pointer">
@@ -1119,7 +1358,7 @@ async function showModelPicker(pane, userId, username) {
     if (isNaN(n) || n < 0) { toast('必须是非负数'); return; }
     lst.querySelectorAll('input[data-p]').forEach(pe => {
       const cb = lst.querySelector(`input[data-m="${CSS.escape(pe.dataset.p)}"]`);
-      if (cb && cb.checked) pe.value = n.toFixed(4);
+      if (cb && cb.checked) pe.value = n.toFixed(6);
     });
   };
   pane.querySelector('#save').onclick = async () => {
@@ -1154,8 +1393,8 @@ async function adminLogs(pane) {
         <tr><td class="mono" style="font-size:11.5px">${fmtTime(l.created_at)}</td>
           <td>${l.user_id || '匿名'}</td>
           <td class="mono">${esc(l.model)}</td>
-          <td>${num(l.quota)}</td><td>${l.elapsed_ms}ms</td>
-          <td>${l.first_byte_ms ? l.first_byte_ms+'ms' : '—'}</td>
+          <td>${num(l.quota)}</td><td>${sec(l.elapsed_ms)}</td>
+          <td>${sec(l.first_byte_ms)}</td>
           <td>${l.is_stream ? '<span class="tag neutral">是</span>' : '—'}</td>
           <td>${l.status_code === 200 ? '<span class="tag ok">200</span>'
               : '<span class="tag err">'+l.status_code+'</span>'}</td></tr>`).join('')}
@@ -1216,7 +1455,7 @@ async function adminPrices(pane) {
               : '<span class="tag warn">付费</span>'}</td>
           <td>${num(p.per_request_price)}</td>
           <td>${+p.per_request_price === 0 ? '—'
-              : '¥'+(+p.per_request_price/1000000).toFixed(4)}</td>
+              : '¥'+(+p.per_request_price/1000000).toFixed(6)}</td>
           <td><button class="btn btn-sm btn-ghost"
               data-m="${esc(p.model)}" data-v="${p.per_request_price}">改价</button></td>
         </tr>`).join('')}
@@ -1256,6 +1495,127 @@ async function adminModels(pane) {
     </table>`;
 }
 
+async function adminBrand(pane) {
+  const r = await api('/api/manage/settings');
+  const s = r.data || {};
+
+  pane.innerHTML = `
+    <div class="pagehead">
+      <div><h2>站点设置</h2>
+        <div class="desc">品牌名称、描述与 Logo —— 对外展示就是这些内容</div></div>
+      <button class="btn btn-sm" onclick="renderAdmin('brand')">刷新</button>
+    </div>
+
+    <div class="section">
+      <h3>品牌信息</h3>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+           padding:20px;box-shadow:var(--shadow);max-width:620px">
+        <div style="margin-bottom:16px">
+          <label>站点名称</label>
+          <input id="b_name" value="${esc(s.name||'')}" placeholder="例如：某某 API 网关" maxlength="40">
+          <div style="font-size:11.5px;color:var(--dim);margin-top:5px">
+            显示在浏览器标题、页头与侧边栏</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label>站点描述</label>
+          <input id="b_desc" value="${esc(s.desc||'')}" placeholder="一句话说明这个站是做什么的" maxlength="120">
+          <div style="font-size:11.5px;color:var(--dim);margin-top:5px">
+            显示在登录页副标题</div>
+        </div>
+        <div style="margin-bottom:18px">
+          <label>页脚文字</label>
+          <input id="b_footer" value="${esc(s.footer||'')}" placeholder="例如：© 2026 某某科技" maxlength="120">
+        </div>
+        <button class="btn btn-primary" id="b_save">保存</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>站点 Logo</h3>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+           padding:20px;box-shadow:var(--shadow);max-width:620px">
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+          <div id="b_preview" style="width:72px;height:72px;border-radius:14px;
+               background:var(--panel2);border:1px solid var(--line);flex:0 0 72px;
+               display:flex;align-items:center;justify-content:center;overflow:hidden">
+            ${s.has_logo
+              ? `<img src="${esc(s.logo_url||'/favicon.ico')}" style="width:100%;height:100%;object-fit:contain">`
+              : `<span style="font-size:11px;color:var(--dim);text-align:center">默认<br>Logo</span>`}
+          </div>
+          <div style="flex:1;min-width:220px">
+            <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">
+              支持 PNG / ICO / JPEG / WebP，不超过 512KB。建议正方形，最小 64×64。
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="file" id="b_file" accept="image/png,image/x-icon,image/jpeg,image/webp"
+                     style="display:none">
+              <button class="btn btn-sm btn-primary" id="b_pick">选择图片</button>
+              ${s.is_custom ? '<button class="btn btn-sm btn-danger" id="b_reset">恢复默认</button>' : ''}
+              <span id="b_status" style="font-size:12px;color:var(--dim)"></span>
+            </div>
+            <div style="font-size:11.5px;color:var(--dim);margin-top:8px">
+              ${s.is_custom ? '当前使用自定义 Logo（' + (s.logo_size/1024).toFixed(1) + ' KB）' : '当前使用内置默认 Logo'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  pane.querySelector('#b_save').onclick = async () => {
+    const body = {
+      name: pane.querySelector('#b_name').value.trim(),
+      desc: pane.querySelector('#b_desc').value.trim(),
+      footer: pane.querySelector('#b_footer').value.trim(),
+    };
+    if (!body.name) { toast('站点名称不能为空'); return; }
+    const r2 = await api('/api/manage/settings', { method: 'PUT', body: JSON.stringify(body) });
+    toast(r2.success ? '已保存，刷新页面生效' : (r2.message || '保存失败'));
+    if (r2.success) {
+      SITE = Object.assign(SITE, body);
+      applySiteBrand();
+    }
+  };
+
+  const fileEl = pane.querySelector('#b_file');
+  const statusEl = pane.querySelector('#b_status');
+
+  pane.querySelector('#b_pick').onclick = () => fileEl.click();
+
+  fileEl.onchange = () => {
+    const f = fileEl.files && fileEl.files[0];
+    if (!f) return;
+    if (f.size > 512 * 1024) { toast('图片不能超过 512KB'); return; }
+    statusEl.textContent = '上传中…';
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const r2 = await api('/api/manage/settings/logo', {
+        method: 'POST',
+        body: JSON.stringify({ data: reader.result }),
+      });
+      if (r2.success) {
+        statusEl.textContent = '已更新';
+        toast('Logo 已更新，刷新页面可见');
+        renderAdmin('brand');
+      } else {
+        statusEl.textContent = '';
+        toast(r2.message || '上传失败');
+      }
+    };
+    reader.onerror = () => { statusEl.textContent = ''; toast('读取文件失败'); };
+    reader.readAsDataURL(f);
+  };
+
+  const resetBtn = pane.querySelector('#b_reset');
+  if (resetBtn) {
+    resetBtn.onclick = async () => {
+      if (!confirm('确定恢复为内置默认 Logo？')) return;
+      const r2 = await api('/api/manage/settings/logo', { method: 'DELETE' });
+      toast(r2.success ? '已恢复默认' : (r2.message || '操作失败'));
+      if (r2.success) renderAdmin('brand');
+    };
+  }
+}
+
 async function adminSecurity(pane) {
   const r = await api('/api/manage/security');
   const g = r.data.loginguard || {};
@@ -1266,14 +1626,18 @@ async function adminSecurity(pane) {
       <button class="btn btn-sm" onclick="renderAdmin('security')">刷新</button>
     </div>
     <div class="cards">
-      <div class="card"><div class="k">追踪中的账号</div>
-        <div class="v">${g.accounts||0}</div></div>
-      <div class="card"><div class="k">追踪中的 IP</div>
-        <div class="v">${g.ips||0}</div></div>
-      <div class="card"><div class="k">已锁定账号</div>
-        <div class="v ${g.locked_accounts>0?'accent':''}">${g.locked_accounts||0}</div></div>
-      <div class="card"><div class="k">已锁定 IP</div>
-        <div class="v ${g.locked_ips>0?'accent':''}">${g.locked_ips||0}</div></div>
+      <div class="card"><div class="ic blue">${I.users}</div>
+        <div class="bd"><div class="k">追踪中的账号</div>
+        <div class="v">${g.accounts||0}</div></div></div>
+      <div class="card"><div class="ic cyan">${I.shield}</div>
+        <div class="bd"><div class="k">追踪中的 IP</div>
+        <div class="v">${g.ips||0}</div></div></div>
+      <div class="card"><div class="ic rose">${I.shield}</div>
+        <div class="bd"><div class="k">已锁定账号</div>
+        <div class="v ${g.locked_accounts>0?'accent':''}">${g.locked_accounts||0}</div></div></div>
+      <div class="card"><div class="ic amber">${I.shield}</div>
+        <div class="bd"><div class="k">已锁定 IP</div>
+        <div class="v ${g.locked_ips>0?'accent':''}">${g.locked_ips||0}</div></div></div>
     </div>
     <div class="section">
       <h3>手工解锁</h3>

@@ -78,22 +78,45 @@ final class AccountController
 
         $items = $this->usableModels($user->id);
 
+        $isAgent = $user->isAgent();
+
         $free = 0;
         $paid = 0;
-        foreach ($items as $it) {
+        $savedTotal = 0.0;
+
+        foreach ($items as $i => $it) {
             if ($it['tier'] === 'paid') {
                 $paid++;
+
+                // 代理额外返回零售价与差价：
+                //   retail_price  平台对外零售价（全局 model_prices）
+                //   saved         每单比零售价省多少（= 代理的毛利空间）
+                //   discount      拿货价 ÷ 零售价，方便代理算利润率
+                if ($isAgent) {
+                    $retail = $this->billing->globalPrice($it['model']);
+                    $items[$i]['retail_price']      = $retail;
+                    $items[$i]['retail_price_yuan'] = round($retail / 1000000, 8);
+                    $items[$i]['saved']             = max(0, $retail - $it['price']);
+                    $items[$i]['saved_yuan']        = round(max(0, $retail - $it['price']) / 1000000, 8);
+                    $items[$i]['discount']          = $retail > 0
+                        ? round($it['price'] / $retail, 4)
+                        : 1.0;
+                    $savedTotal += max(0, $retail - $it['price']) / 1000000;
+                }
             } else {
                 $free++;
             }
         }
 
         $resp->ok([
-            'items'      => $items,
-            'total'      => count($items),
-            'free_total' => $free,
-            'paid_total' => $paid,
-            'base_url'   => $req->origin() . '/v1',
+            'items'       => $items,
+            'total'       => count($items),
+            'free_total'  => $free,
+            'paid_total'  => $paid,
+            'is_agent'    => $isAgent,
+            // 代理界面用：全部计费模型每单合计能省多少
+            'saved_total' => round($savedTotal, 6),
+            'base_url'    => $req->origin() . '/v1',
         ]);
     }
 
@@ -141,7 +164,7 @@ final class AccountController
                 'model'      => $name,
                 'vendor'     => PublicController::vendorOf($name),
                 'price'      => $price,
-                'price_yuan' => round($price / 1000000, 6),
+                'price_yuan' => round($price / 1000000, 8),
                 'tier'       => 'paid',
             ];
         }
@@ -170,19 +193,37 @@ final class AccountController
 
         $items = array_map(static function (array $r): array {
             $quota = (int) $r['quota'];
+            $elapsed = (int) $r['elapsed_ms'];
+            $prompt = (int) $r['prompt_tokens'];
+            $completion = (int) $r['completion_tokens'];
+
+            // 输出速度（token/秒）。用户判断"快不快"靠这个，不是靠毫秒数 ——
+            // 3000ms 生成 20 个 token 和 3000ms 生成 800 个 token 是两回事。
+            // 分母用「总耗时 - 首字节」，因为首字之前的等待不算生成速度。
+            $genMs = $elapsed - (int) $r['first_byte_ms'];
+            $rate = ($genMs > 0 && $completion > 0)
+                ? round($completion / ($genMs / 1000), 1)
+                : 0.0;
+
             return [
                 'id'                => (int) $r['id'],
                 'time'              => (string) $r['created_at'],
                 'model'             => (string) $r['model'],
                 'quota'             => $quota,
-                'quota_yuan'        => round($quota / 1000000, 6),
-                'elapsed_ms'        => (int) $r['elapsed_ms'],
+                'quota_yuan'        => round($quota / 1000000, 8),
+                'elapsed_ms'        => $elapsed,
                 'first_byte_ms'     => (int) $r['first_byte_ms'],
                 'is_stream'         => (bool) $r['is_stream'],
                 'status_code'       => (int) $r['status_code'],
-                'prompt_tokens'     => (int) $r['prompt_tokens'],
-                'completion_tokens' => (int) $r['completion_tokens'],
+                'prompt_tokens'     => $prompt,
+                'completion_tokens' => $completion,
+                'total_tokens'      => $prompt + $completion,
+                'tokens_per_sec'    => $rate,
                 'request_id'        => (string) $r['request_id'],
+                // 上游错误摘要（成功时为空）。截断到 160 字符：
+                // 完整的上游报文可能有几 KB，塞进列表会把表格撑爆，
+                // 真要看全文可以按 request_id 去查服务端日志。
+                'detail'            => mb_substr((string) ($r['detail'] ?? ''), 0, 160),
             ];
         }, $rows);
 
@@ -251,9 +292,9 @@ final class AccountController
             'display_name'  => $u->displayName,
             'email'         => $u->email,
             'quota'         => $u->quota,
-            'quota_yuan'    => round($u->quota / 1000000, 6),
+            'quota_yuan'    => round($u->quota / 1000000, 8),
             'used_quota'    => $u->usedQuota,
-            'used_yuan'     => round($u->usedQuota / 1000000, 6),
+            'used_yuan'     => round($u->usedQuota / 1000000, 8),
             'request_count' => $u->requestCount,
             'last_login_at' => $u->lastLoginAt,
         ];

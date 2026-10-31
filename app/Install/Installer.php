@@ -231,13 +231,18 @@ final class Installer
 
         // ── 4. 创建/更新管理员 ──
         try {
-            $hash = password_hash($adminPass, PASSWORD_BCRYPT);
-            $exists = $pdo->prepare('SELECT id FROM users WHERE username = ?');
+            // cost 固定 12：必须与注册接口一致。
+            // 不指定时用的是 php.ini 默认值，不同环境可能不同 ——
+            // 而登录端的时序防护（dummy 哈希）按 cost=12 设计，
+            // cost 不一致会让「用户是否存在」能从响应耗时上看出来。
+            $hash = password_hash($adminPass, PASSWORD_BCRYPT, ['cost' => 12]);
+            // 用户名大小写不敏感查重，与登录 / 注册保持一致
+            $exists = $pdo->prepare('SELECT id FROM users WHERE lower(username) = lower(?)');
             $exists->execute([$adminUser]);
             if ($exists->fetchColumn() !== false) {
                 $pdo->prepare("
                     UPDATE users SET password_hash = ?, role = 100, account_type = 'managed', status = 1
-                     WHERE username = ?
+                     WHERE lower(username) = lower(?)
                 ")->execute([$hash, $adminUser]);
                 $steps[] = "管理员 {$adminUser} 已存在，密码已重置";
             } else {
@@ -255,7 +260,7 @@ final class Installer
         try {
             $site = $in['site'] ?? [];
             $pairs = [
-                'site_name'        => trim((string) ($site['name'] ?? 'LTZY API')) ?: 'LTZY API',
+                'site_name'        => trim((string) ($site['name'] ?? 'LLM Gateway')) ?: 'LLM Gateway',
                 'site_url'         => rtrim(trim((string) ($site['url'] ?? '')), '/'),
                 'site_logo'        => trim((string) ($site['logo'] ?? '')),
                 'site_installed_at' => date('Y-m-d H:i:s'),
@@ -277,7 +282,7 @@ final class Installer
                 $del = $pdo->prepare('DELETE FROM options WHERE key = ?');
                 $ins = $pdo->prepare('INSERT INTO options (key, value) VALUES (?, ?)');
                 foreach ([
-                    'site_name' => trim((string) ($site['name'] ?? 'LTZY API')) ?: 'LTZY API',
+                    'site_name' => trim((string) ($site['name'] ?? 'LLM Gateway')) ?: 'LLM Gateway',
                     'site_url'  => rtrim(trim((string) ($site['url'] ?? '')), '/'),
                     'site_logo' => trim((string) ($site['logo'] ?? '')),
                 ] as $k => $v) {
@@ -385,7 +390,7 @@ final class Installer
         ];
 
         $header = <<<TXT
-        LTZY-API 配置文件
+        LLM Gateway 配置文件
         由安装向导生成于 %s
 
         注意：

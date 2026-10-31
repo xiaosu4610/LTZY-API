@@ -10,6 +10,7 @@ use Ltzy\Http\Request;
 use Ltzy\Http\Response;
 use Ltzy\Relay\KeyPoolManager;
 use Ltzy\Support\Ctx;
+use Ltzy\Support\SiteConfig;
 
 /**
  * 公开接口：状态、模型列表、模型广场。
@@ -17,7 +18,7 @@ use Ltzy\Support\Ctx;
  * /api/status、/api/site、/api/model/plaza 是完全公开的营销面，
  * 匿名可访问，只展示免费池 —— 那是给人的第一眼，不该要密钥。
  *
- * /v1/models 是例外：按 OpenAI 规范要求 Bearer 密钥（2026-10-29 起）。
+ * /v1/models 是例外：按 OpenAI 规范要求 Bearer 密钥。
  * 登录/带 key 才返回「免费池 + 该用户可用的计费模型」，
  * 无密钥一律 401 invalid_api_key，与官方行为一致。详见 models()。
  */
@@ -26,7 +27,7 @@ final class PublicController
     /**
      * 免费模型清单缓存（**按数组缓存，不再缓存整串响应**）。
      *
-     * 2026-10-29 起 /v1/models 变成「登录后按用户返回」：
+     * /v1/models 已改为「登录后按用户返回」：
      * 免费部分对所有人一样，收费部分一人一份，所以整串 JSON 已经没法共用了。
      * 现在只缓存免费那一段，收费部分按用户实时拼。
      *
@@ -49,6 +50,7 @@ final class PublicController
         private readonly KeyPoolManager $pools,
         private readonly Billing $billing,
         private readonly Connection $db,
+        private readonly SiteConfig $site,
     ) {
     }
 
@@ -281,16 +283,28 @@ final class PublicController
 
         $host = $req->header('host') ?? '127.0.0.1:3000';
 
+        // 品牌信息来自后台配置（可在「站点设置」里改），
+        // 分发给不同用户部署时不用改代码。
+        $brandCfg = $this->site->brand();
+        // Logo 有两层：管理员上传的（var/）优先，内置默认（web/）兜底
+        $customLogo = dirname(__DIR__, 3) . '/var/favicon.ico';
+        $defaultLogo = dirname(__DIR__, 3) . '/web/favicon.ico';
+        $logoFile = is_file($customLogo) ? $customLogo : (is_file($defaultLogo) ? $defaultLogo : '');
+        $hasLogo = $logoFile !== '';
+
         $resp->ok([
             'brand' => [
-                'name'   => 'LTZY API',
-                'slogan' => '开放的大模型接口服务',
-                // 2026-10-29 起改为注册制：原文「无需注册、无需登录」已失效。
+                'name'     => $brandCfg['name'],
+                'slogan'   => $brandCfg['desc'],
                 // 这段文案同时出现在首页 hero、meta description 和这里，
                 // 三处必须一致，否则用户看到的是自相矛盾的说明。
-                'intro'  => '汇聚多个主流大模型，注册即全量解锁。免费模型不限次、不扣费；'
+                'intro'    => '汇聚多个主流大模型，注册即全量解锁。免费模型不限次、不扣费；'
                     . '计费模型按次扣费，充值即用，接口与 OpenAI 完全一致。',
+                'footer'   => $brandCfg['footer'],
             ],
+            // 前端据此决定显示自定义图片还是默认字母方块
+            'has_logo'     => $hasLogo,
+            'logo_url'     => '/favicon.ico?v=' . ($hasLogo ? filemtime($logoFile) : 0),
             'base_url'     => $req->origin() . '/v1',
             'free_models'  => count($models),
             'vendor_count' => count($vendors),

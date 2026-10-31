@@ -15,11 +15,12 @@ use Ltzy\Http\Response;
 use Ltzy\Relay\KeyPoolManager;
 use Ltzy\Support\Ctx;
 use Ltzy\Support\Logger;
+use Ltzy\Support\SiteConfig;
 
 /**
  * 超管接口。
  *
- * 「我们」用的后台：管渠道、定全局价、创建经销商、给经销商分配模型。
+ * 「我们」用的后台：管渠道、定全局价、创建分销账号、给分销分配模型。
  * 所有端点都要求 role >= 10。鉴权在 handle() 入口统一做，
  * 避免每个方法都写一遍（漏一个就是越权漏洞）。
  */
@@ -27,6 +28,7 @@ final class AdminController
 {
     private UserRepository $users;
     private AccountRepository $accounts;
+    private SiteConfig $site;
 
     public function __construct(
         private readonly Connection $db,
@@ -38,6 +40,7 @@ final class AdminController
     ) {
         $this->users = new UserRepository($db);
         $this->accounts = new AccountRepository($db);
+        $this->site = new SiteConfig($db);
     }
 
     public function handle(Request $req, Response $resp, string $path, string $method): void
@@ -58,6 +61,25 @@ final class AdminController
         $id = isset($parts[1]) && ctype_digit($parts[1]) ? (int) $parts[1] : 0;
 
         switch (true) {
+            // ── 站点品牌配置 ─────────────────────
+            // 这套系统要分发出去，站点名、描述、Logo 都得让部署方自己改
+            case $resource === 'settings' && $method === 'GET':
+                $this->getSettings($resp);
+                return;
+
+            case $resource === 'settings' && $method === 'PUT':
+                $this->saveSettings($req, $resp);
+                return;
+
+            // Logo 上传：POST multipart（字段名 logo），或 JSON {"data":"base64"}
+            case $resource === 'settings' && ($parts[1] ?? '') === 'logo' && $method === 'POST':
+                $this->uploadLogo($req, $resp);
+                return;
+
+            case $resource === 'settings' && ($parts[1] ?? '') === 'logo' && $method === 'DELETE':
+                $this->resetLogo($resp);
+                return;
+
             // ── 系统状态（内部用，含技术栈等敏感信息）──
             case $resource === 'status' && $method === 'GET':
                 $this->systemStatus($resp);
@@ -177,9 +199,172 @@ final class AdminController
     }
 
     /**
+     * GET /api/manage/settings —— 读站点品牌配置
+     */
+    private function getSettings(Response $resp): void
+    {
+        $brand = $this->site->brand();
+        $customLogo = dirname(__DIR__, 3) . '/var/favicon.ico';
+        $defaultLogo = dirname(__DIR__, 3) . '/web/favicon.ico';
+        $logoFile = is_file($customLogo) ? $customLogo : (is_file($defaultLogo) ? $defaultLogo : '');
+
+        $resp->ok([
+            'name'      => $brand['name'],
+            'desc'      => $brand['desc'],
+            'footer'    => $brand['footer'],
+            // is_custom 区分「上传过自定义」和「用内置默认」，
+            // 前者才显示"恢复默认"按钮
+            'has_logo'  => $logoFile !== '',
+            'is_custom' => is_file($customLogo),
+            'logo_size' => $logoFile !== '' ? filesize($logoFile) : 0,
+            'logo_url'  => '/favicon.ico?v=' . ($logoFile !== '' ? filemtime($logoFile) : 0),
+        ]);
+    }
+
+    /**
+     * PUT /api/manage/settings —— 保存站点名称 / 描述 / 页脚
+     */
+    private function saveSettings(Request $req, Response $resp): void
+    {
+        $body = $req->json() ?? [];
+        $n = $this->site->save([
+            'site_name'   => $body['name'] ?? null,
+            'site_desc'   => $body['desc'] ?? null,
+            'site_footer' => $body['footer'] ?? null,
+        ]);
+
+        if ($n === 0) {
+            $resp->json(['success' => false, 'message' => '没有可保存的内容'], 400);
+
+            return;
+        }
+
+        $resp->ok(['saved' => $n], '已保存');
+    }
+
+    /**
+     * POST /api/manage/settings/logo —— 上传站点 Logo
+     *
+     * 两种提交方式都支持：
+     *   1. multipart/form-data，字段名 logo
+     *   2. application/json，{"data": "data:image/png;base64,..."}
+     *
+     * 安全约束（这是唯一能往磁盘写文件的接口，必须收紧）：
+     *   · 只认 PNG / ICO / JPEG / WebP 四种真实图片格式（按文件头判断，不信任扩展名）
+     *   · 大小上限 512KB —— Logo 不需要更大，也避免被拿来当文件中转站
+     *   · 固定写到 var/favicon.ico，文件名不可控，杜绝路径穿越
+     */
+    private function uploadLogo(Request $req, Response $resp): void
+    {
+        $raw = '';
+
+        $b64 = (string) (($req->json() ?? [])['data'] ?? '');
+        if ($b64 !== '') {
+            // 去掉 data:image/png;base64, 前缀
+            if (str_contains($b64, ',')) {
+                $b64 = substr($b64, strpos($b64, ',') + 1);
+            }
+            $decoded = base64_decode($b64, true);
+            if ($decoded === false) {
+                $resp->json(['success' => false, 'message' => '图片内容无法解码'], 400);
+
+                return;
+            }
+            $raw = $decoded;
+        } else {
+            // multipart：Swoole 把上传文件放临时目录，必须在当前请求内读完
+            $files = $req->filesAll();
+            $info = $files['logo'] ?? null;
+            $tmp = is_array($info) ? (string) ($info['tmp_name'] ?? '') : '';
+            if ($tmp === '' || !is_file($tmp)) {
+                $resp->json(['success' => false, 'message' => '没有收到图片文件'], 400);
+
+                return;
+            }
+            $raw = (string) @file_get_contents($tmp);
+        }
+
+        if (strlen($raw) > 512 * 1024) {
+            $resp->json(['success' => false, 'message' => 'Logo 不能超过 512KB'], 400);
+
+            return;
+        }
+
+        // 按文件头识别真实格式，不看扩展名 —— 扩展名可以随便改
+        $kind = $this->detectImageKind($raw);
+        if ($kind === null) {
+            $resp->json(['success' => false, 'message' => '只支持 PNG / ICO / JPEG / WebP 格式'], 400);
+
+            return;
+        }
+
+        $dir = dirname(__DIR__, 3) . '/var';
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+            $resp->json(['success' => false, 'message' => '无法创建存储目录'], 500);
+
+            return;
+        }
+
+        // 浏览器要求 /favicon.ico 返回 ICO；上传 PNG 也直接存成同一文件 ——
+        // 现代浏览器按内容识别格式，不做转换可以少一个 GD 依赖。
+        $target = $dir . '/favicon.ico';
+        if (@file_put_contents($target, $raw, LOCK_EX) === false) {
+            $resp->json(['success' => false, 'message' => '写入失败，检查 var/ 目录权限'], 500);
+
+            return;
+        }
+        @chmod($target, 0644);
+
+        $resp->ok([
+            'kind'     => $kind,
+            'size'     => strlen($raw),
+            'logo_url' => '/favicon.ico?v=' . filemtime($target),
+        ], 'Logo 已更新');
+    }
+
+    /**
+     * DELETE /api/manage/settings/logo —— 恢复内置默认 Logo
+     */
+    private function resetLogo(Response $resp): void
+    {
+        $target = dirname(__DIR__, 3) . '/var/favicon.ico';
+        if (is_file($target) && !@unlink($target)) {
+            $resp->json(['success' => false, 'message' => '删除失败，检查文件权限'], 500);
+
+            return;
+        }
+
+        $resp->ok(['has_logo' => false], '已恢复默认 Logo');
+    }
+
+    /**
+     * 按文件头判断图片类型，返回 'png' / 'ico' / 'jpeg' / 'webp'，不认识返回 null。
+     */
+    private function detectImageKind(string $raw): ?string
+    {
+        if (strlen($raw) < 12) {
+            return null;
+        }
+        if (substr($raw, 0, 4) === "\x89PNG") {
+            return 'png';
+        }
+        if (substr($raw, 0, 4) === "\x00\x00\x01\x00") {
+            return 'ico';
+        }
+        if (substr($raw, 0, 3) === "\xFF\xD8\xFF") {
+            return 'jpeg';
+        }
+        if (substr($raw, 0, 4) === 'RIFF' && substr($raw, 8, 4) === 'WEBP') {
+            return 'webp';
+        }
+
+        return null;
+    }
+
+    /**
      * GET /api/manage/accounts
      *
-     * 只列 role=1 的账户（经销商），不含超管。
+     * 只列 role=1 的账户（分销），不含超管。
      */
     private function listAccounts(Request $req, Response $resp): void
     {

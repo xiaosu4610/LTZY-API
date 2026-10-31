@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Ltzy\Http\Controller;
 
+use Ltzy\Domain\User\User;
 use Ltzy\Http\Request;
 use Ltzy\Http\Response;
 use Ltzy\Payment\PaymentService;
@@ -41,17 +42,28 @@ final class RechargeController
     {
         $p = $this->cfg;
 
+        // 代理不能自助充值：余额由平台方统一划拨。
+        // 这里直接把开关关掉，前端就不会渲染充值表单 ——
+        // 比"点了才报错"体验好，也避免代理误以为可以自己充。
+        $user = Ctx::get('user_obj');
+        $isAgent = $user instanceof User && $user->isAgent();
+
         $resp->ok([
-            'enabled'     => (bool) $p['enabled'],
-            'amounts'     => $p['amounts'],
+            'enabled'      => (bool) $p['enabled'] && !$isAgent,
+            'amounts'      => $isAgent ? [] : $p['amounts'],
             // ⚠️ 用 float 不要 (int)：最低 0.01 元强转成 int 就是 0，
             // 前端会显示「最低 0 元」。
-            'min_amount'  => (float) $p['min_amount'],
-            'max_amount'  => (int) $p['max_amount'],
-            'pay_types'   => $p['pay_types'],
-            'rate'        => (int) $p['rate'],
+            'min_amount'   => (float) $p['min_amount'],
+            'max_amount'   => (int) $p['max_amount'],
+            'pay_types'    => $isAgent ? [] : $p['pay_types'],
+            'rate'         => (int) $p['rate'],
             // 让前端能显示「充 10 元 = 1000 万额度」，不用把换算逻辑写死两份
-            'unit_hint'   => '1 元 = ' . number_format((int) $p['rate']) . ' 额度',
+            'unit_hint'    => '1 元 = ' . number_format((int) $p['rate']) . ' 额度',
+            // 分销账号专属：前端据此显示"平台划拨"说明而不是充值入口
+            'agent_locked' => $isAgent,
+            'agent_hint'   => $isAgent
+                ? '当前账号不支持自助充值，余额由平台方统一划拨。需要加款请联系平台运营。'
+                : '',
         ]);
     }
 
@@ -61,6 +73,15 @@ final class RechargeController
         $userId = Ctx::int('user_id');
         if ($userId <= 0) {
             $resp->fail('请先登录', 401, 'login_required');
+
+            return;
+        }
+
+        // 分销账号禁止自助充值 —— 余额由平台方手工划拨。
+        // 前端已隐藏入口，这里再拦一道，防止直接打接口。
+        $curUser = Ctx::get('user_obj');
+        if ($curUser instanceof User && $curUser->isAgent()) {
+            $resp->fail('当前账号不支持自助充值，余额由平台方统一划拨，请联系运营加款', 403, 'agent_no_recharge');
 
             return;
         }

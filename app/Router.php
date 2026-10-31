@@ -38,6 +38,7 @@ use Ltzy\Security\RateLimiter;
 use Ltzy\Security\RegisterGuard;
 use Ltzy\Support\Ctx;
 use Ltzy\Support\Logger;
+use Ltzy\Support\SiteConfig;
 
 /**
  * 路由表。
@@ -60,6 +61,7 @@ final class Router
     private RateLimiter $limiter;
     private PaymentService $payment;
     private RechargeController $recharge;
+    private SiteConfig $site;
 
     public function __construct(
         private readonly ChannelSourceInterface $channels,
@@ -72,6 +74,8 @@ final class Router
         ?RegisterGuard $regGuard = null,
     ) {
         $this->users = new UserRepository($db);
+        // 品牌配置：分发给不同用户部署时，站点名/Logo 必须能在后台改
+        $this->site = new SiteConfig($db);
         // 鉴权缓存：把「每次请求查一次 tokens JOIN users」降到 5 秒一次。
         // 压测显示这个查询的规划时间（4.6ms）比执行时间（0.2ms）高 20 倍，
         // 是带鉴权接口 QPS 只有无鉴权一半的主因。
@@ -251,7 +255,7 @@ final class Router
             return;
         }
 
-        $public = new PublicController($this->channels, $this->pools, $this->billing, $this->db);
+        $public = new PublicController($this->channels, $this->pools, $this->billing, $this->db, $this->site);
         $account = new AccountController(
             $this->accounts,
             $this->auth,
@@ -434,6 +438,21 @@ final class Router
 
             case $path === '/plaza' && $method === 'GET':
                 $this->page($resp, 'plaza.html');
+                return;
+
+            // 站点图标：优先用管理员上传的自定义 logo（var/favicon.ico），
+            // 没上传过就用内置默认（web/favicon.ico）。
+            // 浏览器会自动请求这个路径，所有页面共用。
+            case $path === '/favicon.ico' && $method === 'GET':
+                $custom = dirname(__DIR__) . '/var/favicon.ico';
+                $file = is_file($custom) ? $custom : dirname(__DIR__) . '/web/favicon.ico';
+                $data = @file_get_contents($file);
+                if ($data === false) {
+                    $resp->status(404);
+                    $resp->end();
+                    return;
+                }
+                $resp->binary($data, 'image/x-icon');
                 return;
 
             // 唯一的登录/后台入口。

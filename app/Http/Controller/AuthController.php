@@ -135,8 +135,18 @@ final class AuthController
                 'user_agent'   => substr((string) $req->header('user-agent'), 0, 120),
             ]);
 
-            // 统一话术：不说"用户不存在"，也不说"密码错误"
-            $resp->json(['success' => false, 'message' => '用户名或密码错误'], 401);
+            // 话术对外统一：不区分"用户不存在"和"密码错误"，避免被枚举账号。
+            // 但带上 request_id，用户报障时把它给管理员，能直接定位到本次尝试
+            // （日志里已记录 user_exists，管理员一看就知道是查无此人还是密码错）。
+            $resp->json([
+                'success'    => false,
+                'message'    => '用户名或密码错误',
+                'code'       => 'bad_credentials',
+                'request_id' => Ctx::requestId(),
+                'hint'       => '请确认用户名大小写与密码。多次失败会被临时锁定；'
+                    . '若确认无误仍无法登录，请把上面的请求 ID 提供给站点管理员。',
+            ], 401);
+
             return;
         }
 
@@ -157,10 +167,16 @@ final class AuthController
         $this->users->setAccessToken($user->id, $sessionToken);
         $this->users->touchLogin($user->id);
 
-        // 如果哈希用的还是旧格式（$2a$ 或低 cost），趁这次拿到明文密码升级
-        if (password_needs_rehash($user->passwordHash, PASSWORD_DEFAULT)) {
+        // 如果哈希用的还是旧格式（$2a$ 或低 cost），趁这次拿到明文密码升级。
+        //
+        // ⚠️ 必须显式和注册/安装向导用同一套参数（bcrypt cost 12）。
+        // 用 PASSWORD_DEFAULT 的话，不同 PHP 版本的默认值可能不同
+        // （8.4 起默认 cost 从 10 提到 12，甚至可能切到 argon2），
+        // 升级后反而和别处不一致，登录时序又会重新暴露"用户是否存在"。
+        $pwOpts = ['cost' => 12];
+        if (password_needs_rehash($user->passwordHash, PASSWORD_BCRYPT, $pwOpts)) {
             try {
-                $this->users->updatePasswordHash($user->id, password_hash($password, PASSWORD_DEFAULT));
+                $this->users->updatePasswordHash($user->id, password_hash($password, PASSWORD_BCRYPT, $pwOpts));
                 Logger::info('security.password_rehashed', ['user_id' => $user->id]);
             } catch (\Throwable $e) {
                 // 升级失败不影响登录
@@ -469,11 +485,13 @@ final class AuthController
             'display_name'  => $u->displayName,
             'email'         => $u->email,
             'quota'         => $u->quota,
-            'quota_yuan'    => round($u->quota / 1000000, 6),
+            'quota_yuan'    => round($u->quota / 1000000, 8),
             'used_quota'    => $u->usedQuota,
-            'used_yuan'     => round($u->usedQuota / 1000000, 6),
+            'used_yuan'     => round($u->usedQuota / 1000000, 8),
             'request_count' => $u->requestCount,
             'last_login_at' => $u->lastLoginAt,
+            // 代理标识：前端据此切换成代理界面（拿货价 / 无充值入口）
+            'is_agent'      => $u->isAgent(),
         ];
     }
 

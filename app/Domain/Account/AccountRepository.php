@@ -94,7 +94,7 @@ final class AccountRepository
     {
         return $this->db->query(
             'SELECT id, created_at, model, quota, elapsed_ms, first_byte_ms, is_stream,
-                    status_code, request_id, prompt_tokens, completion_tokens
+                    status_code, request_id, prompt_tokens, completion_tokens, detail
              FROM logs
              WHERE user_id = ?
                AND created_at >= now() - (? || \' days\')::interval

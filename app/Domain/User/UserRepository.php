@@ -45,7 +45,19 @@ final class UserRepository
      */
     public function findByUsername(string $identifier): ?User
     {
-        $row = $this->db->first('SELECT * FROM users WHERE username = ?', [$identifier]);
+        // ⚠️ 用户名大小写不敏感 —— 用 lower() 比较，不做精确匹配。
+        //
+        // 原因（开源后第一个用户反馈就是「登录报用户名或密码错误」）：
+        //   PostgreSQL 的 = 区分大小写，而注册和安装向导都保留用户输入的原始
+        //   大小写。数据库存 `ustinian`、用户输入 `Ustinian` 就查不到，
+        //   报「用户名或密码错误」，用户完全无从自行排查。
+        //   查重也区分大小写时，`Test` 和 `test` 还能注册成两个账号互相冒充。
+        //
+        // lower() 对中文是 no-op，不影响中文用户名。
+        $row = $this->db->first(
+            'SELECT * FROM users WHERE lower(username) = lower(?) LIMIT 1',
+            [$identifier]
+        );
         if ($row !== null) {
             return $this->hydrate($row);
         }
@@ -55,10 +67,12 @@ final class UserRepository
             return null;
         }
 
+        // 邮箱同样不区分大小写（域名部分本来就无大小写语义）
         $row = $this->db->first(
-            "SELECT * FROM users WHERE email = ? AND email <> '' LIMIT 1",
+            "SELECT * FROM users WHERE lower(email) = lower(?) AND email <> '' LIMIT 1",
             [$identifier]
         );
+
         return $row === null ? null : $this->hydrate($row);
     }
 
@@ -129,7 +143,7 @@ final class UserRepository
      * ⚠️ account_type 必须显式传，不能靠数据库默认值 ——
      * 那个默认是 'managed'（经销商），新注册用户用了会被当成经销商。
      *
-     * 三类账号（2026-10-29 起仅作来源标记，生命周期完全一致，
+     * 三类账号（仅作来源标记，生命周期完全一致，
      * 都不会被自动删除）：
      *   special —— 旧系统迁移来的历史用户
      *   managed —— 经销商 / 我们自己开的
@@ -155,7 +169,12 @@ final class UserRepository
      */
     public function usernameExists(string $username): bool
     {
-        return $this->db->first('SELECT 1 FROM users WHERE username = ?', [$username]) !== null;
+        // 大小写不敏感查重：否则 `Test` 与 `test` 会变成两个账号，
+        // 后者能冒充前者（登录查找同样不区分大小写时会串到先插入的那个）。
+        return $this->db->first(
+            'SELECT 1 FROM users WHERE lower(username) = lower(?)',
+            [$username]
+        ) !== null;
     }
 
     /**
@@ -265,6 +284,7 @@ final class UserRepository
             requestCount: (int) $row['request_count'],
             remark: (string) $row['remark'],
             lastLoginAt: isset($row['last_login_at']) ? (string) $row['last_login_at'] : null,
+            accountType: (string) ($row['account_type'] ?? 'normal'),
         );
     }
 }

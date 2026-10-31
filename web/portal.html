@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LTZY API · 开放的大模型接口服务</title>
+<title>LLM Gateway · 开放的大模型接口服务</title>
 <meta name="description" content="汇聚多个主流大模型，注册即用。免费模型不限次数，OpenAI 兼容接口，复制地址即可调用。">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -128,7 +128,7 @@ footer a{color:var(--muted)}
 <header>
   <div class="wrap nav">
     <a href="/" class="logo" style="color:var(--text);text-decoration:none">
-      <span class="dot"></span> LTZY API
+      <span class="dot"></span> LLM Gateway
     </a>
     <div class="nav-links">
       <a href="/" class="on">首页</a>
@@ -249,7 +249,7 @@ footer a{color:var(--muted)}
 
 <footer>
   <div class="wrap">
-    LTZY API
+    LLM Gateway
     <br>
     <span style="margin-top:8px;display:inline-block">
       <a href="/plaza">模型广场</a> ·
@@ -286,6 +286,22 @@ async function load() {
     $('#statModels').textContent = d.free_models;
     $('#statVendors').textContent = d.vendor_count;
     $('#heroDesc').textContent = d.brand.intro;
+
+    // 品牌名与 Logo 按后台配置渲染（分发给不同用户部署时各自不同）
+    const bn = (d.brand && d.brand.name) || 'LLM Gateway';
+    document.title = bn + ' · ' + ((d.brand && d.brand.slogan) || '开放的大模型接口服务');
+    document.querySelectorAll('.brand, .nav-brand').forEach(el => {
+      if (el.querySelector('.logo')) { return; }
+      el.innerHTML = '<span class="dot"></span> ' + esc(bn);
+    });
+    if (d.has_logo) {
+      let link = document.querySelector('link[rel="icon"]');
+      if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+      link.href = d.logo_url;
+    }
+    if (d.brand && d.brand.footer) {
+      document.querySelectorAll('.foot, footer').forEach(el => { el.textContent = d.brand.footer; });
+    }
 
     // 厂商标签
     $('#vendorList').innerHTML = d.vendors.map(v =>
